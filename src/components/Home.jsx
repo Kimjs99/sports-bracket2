@@ -2,6 +2,7 @@ import { useContext, useState, useEffect } from 'react';
 import {
   Plus, Trophy, Lock, Settings, Swords, CalendarDays,
   Users, Layers, Bell, Search, MapPin, Clock, Trash2, HelpCircle,
+  Share2, Check, LinkIcon,
 } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
@@ -10,6 +11,8 @@ import { useAdmin } from '../contexts/AdminContext';
 import { loadTournament, saveTournament } from '../utils/storage';
 import BracketTree from './ui/BracketTree';
 import HelpModal from './ui/HelpModal';
+import { buildShareUrl } from '../utils/shareUtils';
+import { loadTournament as loadTournamentById } from '../utils/storage';
 
 const LEVELS = ['고등', '중등'];
 const LEVEL_COLOR = {
@@ -257,6 +260,18 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
   const [activeTab, setActiveTab] = useState('overview');
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  function copyShareLink() {
+    const data = loadTournamentById(currentId);
+    if (!data) return;
+    const url = buildShareUrl(data);
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   useEffect(() => {
     const id = currentId ?? summaryList[0]?.id;
@@ -392,22 +407,36 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
             </div>
           )}
 
-          {isAdmin && (
-            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 flex-wrap">
-              <button onClick={() => navigate(SCREENS.DRAW)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition-colors">
-                <Settings size={12} /> 대진 관리
-              </button>
-              <button onClick={() => navigate(SCREENS.MATCH_PLAY)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
-                <Swords size={12} /> 경기 진행
-              </button>
+          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 flex-wrap">
+            {isAdmin && (
+              <>
+                <button onClick={() => navigate(SCREENS.DRAW)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium transition-colors">
+                  <Settings size={12} /> 대진 관리
+                </button>
+                <button onClick={() => navigate(SCREENS.MATCH_PLAY)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
+                  <Swords size={12} /> 경기 진행
+                </button>
+              </>
+            )}
+            <button
+              onClick={copyShareLink}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors
+                ${copied
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+            >
+              {copied ? <><Check size={12} /> 복사됨!</> : <><Share2 size={12} /> 공유 링크</>}
+            </button>
+            {isAdmin && (
               <button onClick={handleNew}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors ml-auto">
                 <Plus size={12} /> 새 대진
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -642,20 +671,24 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
 // ─── Home (root) ──────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { state, dispatch } = useContext(AppContext);
+  const { state, dispatch, importedLevel } = useContext(AppContext);
   const { tournamentList } = state;
   const { isLoggedIn, requireAdmin, setModalOpen } = useAdmin();
   const [activeLevel, setActiveLevel] = useState('고등');
   const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
+    if (importedLevel) {
+      setActiveLevel(importedLevel);
+      return;
+    }
     if (tournamentList.length > 0) {
       const hasGo = tournamentList.some(t => t.schoolLevel === '고등');
       if (!hasGo && tournamentList.some(t => t.schoolLevel === '중등')) {
         setActiveLevel('중등');
       }
     }
-  }, []);
+  }, [importedLevel]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -702,6 +735,16 @@ export default function Home() {
           })}
         </div>
       </div>
+
+      {/* Import banner */}
+      {importedLevel && (
+        <div className="max-w-4xl mx-auto px-4 pt-3">
+          <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-2.5 text-sm text-green-700 dark:text-green-400 font-medium">
+            <LinkIcon size={14} className="shrink-0" />
+            공유된 대진을 불러왔습니다. 현재 기기에 저장되었습니다.
+          </div>
+        </div>
+      )}
 
       {/* Level panels */}
       <div className="pb-24">

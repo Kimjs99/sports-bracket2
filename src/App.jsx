@@ -1,8 +1,9 @@
-import { createContext, useReducer, useEffect, useState } from 'react';
+import { createContext, useReducer, useEffect, useState, useCallback } from 'react';
 import { reducer, initialState } from './store/reducer';
 import { ACTIONS } from './store/actions';
 import { SCREENS } from './constants';
-import { migrateFromLegacy } from './utils/storage';
+import { migrateFromLegacy, saveTournament } from './utils/storage';
+import { readShareParam, clearShareParam } from './utils/shareUtils';
 import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import Home from './components/Home';
 import Setup from './components/Setup';
@@ -17,16 +18,26 @@ export const AppContext = createContext(null);
 function AppInner({ theme, setTheme }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { modalOpen } = useAdmin();
+  const [importedLevel, setImportedLevel] = useState(null);
 
   useEffect(() => {
     migrateFromLegacy();
+
+    const shared = readShareParam();
+    if (shared?.meta?.id) {
+      saveTournament(shared);
+      clearShareParam();
+      setImportedLevel(shared.meta.schoolLevel ?? null);
+      setTimeout(() => setImportedLevel(null), 4000);
+    }
+
     dispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST });
   }, []);
 
   const screen = state.currentScreen;
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, importedLevel }}>
       <GlobalBar theme={theme} setTheme={setTheme} />
       {screen === SCREENS.HOME && <Home />}
       {screen === SCREENS.SETUP && <Setup />}
