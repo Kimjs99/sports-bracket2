@@ -6,14 +6,33 @@ async function captureElement(element) {
   return html2canvas(element, {
     scale: 2,
     useCORS: true,
+    allowTaint: true,
     backgroundColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
     logging: false,
   });
 }
 
+function triggerDownload(url, filename) {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  // Small delay before cleanup to ensure the click registers
+  setTimeout(() => {
+    document.body.removeChild(link);
+    if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+  }, 200);
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+
 export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(null); // 'pdf' | 'png' | 'jpg' | null
+  const [loading, setLoading] = useState(null);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -26,53 +45,60 @@ export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
 
   async function downloadPng() {
     if (!targetRef.current) return;
-    setLoading('png');
+    setLoading('png'); setOpen(false);
     try {
       const canvas = await captureElement(targetRef.current);
-      const link = document.createElement('a');
-      link.download = `${filename}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } finally { setLoading(null); setOpen(false); }
+      const blob = await canvasToBlob(canvas, 'image/png');
+      triggerDownload(URL.createObjectURL(blob), `${filename}.png`);
+    } catch (e) {
+      console.error('PNG 다운로드 실패:', e);
+      alert('다운로드에 실패했습니다. 다시 시도해 주세요.');
+    } finally { setLoading(null); }
   }
 
   async function downloadJpg() {
     if (!targetRef.current) return;
-    setLoading('jpg');
+    setLoading('jpg'); setOpen(false);
     try {
       const canvas = await captureElement(targetRef.current);
-      const link = document.createElement('a');
-      link.download = `${filename}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.92);
-      link.click();
-    } finally { setLoading(null); setOpen(false); }
+      const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+      triggerDownload(URL.createObjectURL(blob), `${filename}.jpg`);
+    } catch (e) {
+      console.error('JPG 다운로드 실패:', e);
+      alert('다운로드에 실패했습니다. 다시 시도해 주세요.');
+    } finally { setLoading(null); }
   }
 
   async function downloadPdf() {
     if (!targetRef.current) return;
-    setLoading('pdf');
+    setLoading('pdf'); setOpen(false);
     try {
       const canvas = await captureElement(targetRef.current);
       const { jsPDF } = await import('jspdf');
-      const imgData = canvas.toDataURL('image/png');
+      const blob = await canvasToBlob(canvas, 'image/png');
+      const imgDataUrl = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-
-      // A4 landscape if wide, portrait if tall
       const isLandscape = imgWidth > imgHeight;
       const pdf = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait', unit: 'px', format: 'a4' });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-
       const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
       const w = imgWidth * ratio;
       const h = imgHeight * ratio;
-      const x = (pageWidth - w) / 2;
-      const y = (pageHeight - h) / 2;
+      pdf.addImage(imgDataUrl, 'PNG', (pageWidth - w) / 2, (pageHeight - h) / 2, w, h);
 
-      pdf.addImage(imgData, 'PNG', x, y, w, h);
-      pdf.save(`${filename}.pdf`);
-    } finally { setLoading(null); setOpen(false); }
+      const pdfBlob = pdf.output('blob');
+      triggerDownload(URL.createObjectURL(pdfBlob), `${filename}.pdf`);
+    } catch (e) {
+      console.error('PDF 다운로드 실패:', e);
+      alert('다운로드에 실패했습니다. 다시 시도해 주세요.');
+    } finally { setLoading(null); }
   }
 
   const isLoading = loading !== null;
@@ -80,13 +106,14 @@ export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
   return (
     <div className="relative" ref={menuRef}>
       <button
-        onClick={() => setOpen(v => !v)}
+        onClick={() => !isLoading && setOpen(v => !v)}
         disabled={isLoading}
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
       >
-        {isLoading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-        내려받기
-        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        {isLoading
+          ? <><Loader2 size={13} className="animate-spin" /> {loading?.toUpperCase()} 변환 중…</>
+          : <><Download size={13} /> 내려받기 <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} /></>
+        }
       </button>
 
       {open && (
