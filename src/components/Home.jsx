@@ -1,7 +1,7 @@
 import { useContext, useState, useEffect } from 'react';
 import {
   Plus, Trophy, Lock, Settings, Swords, CalendarDays,
-  Users, Layers, Bell, Search, MapPin, Clock, Trash2,
+  Users, Layers, Bell, Search, MapPin, Clock, Trash2, HelpCircle,
 } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
@@ -9,6 +9,7 @@ import { SCREENS, MATCH_STATUS } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
 import { loadTournament, saveTournament } from '../utils/storage';
 import BracketTree from './ui/BracketTree';
+import HelpModal from './ui/HelpModal';
 
 const LEVELS = ['고등', '중등'];
 const LEVEL_COLOR = {
@@ -645,6 +646,7 @@ export default function Home() {
   const { tournamentList } = state;
   const { isLoggedIn, requireAdmin, setModalOpen } = useAdmin();
   const [activeLevel, setActiveLevel] = useState('고등');
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (tournamentList.length > 0) {
@@ -657,6 +659,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+
       {/* App header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -667,12 +671,19 @@ export default function Home() {
               <p className="text-xs text-gray-500 dark:text-gray-400">토너먼트 대진 관리</p>
             </div>
           </div>
-          {!isLoggedIn && (
-            <button onClick={() => setModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <Lock size={12} /> 관리자
+          <div className="flex items-center gap-2">
+            <button onClick={() => setHelpOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              title="사용 가이드">
+              <HelpCircle size={13} /> 도움말
             </button>
-          )}
+            {!isLoggedIn && (
+              <button onClick={() => setModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <Lock size={12} /> 관리자
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Level tabs */}
