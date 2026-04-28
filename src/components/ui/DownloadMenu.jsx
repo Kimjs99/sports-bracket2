@@ -1,17 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Download, FileImage, FileText, ChevronDown, Loader2 } from 'lucide-react';
 
-async function captureElement(element) {
-  const { default: html2canvas } = await import('html2canvas');
-  return html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
-    logging: false,
-  });
-}
-
 function triggerDownload(url, filename) {
   const link = document.createElement('a');
   link.href = url;
@@ -19,15 +8,23 @@ function triggerDownload(url, filename) {
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
-  // Small delay before cleanup to ensure the click registers
   setTimeout(() => {
     document.body.removeChild(link);
     if (url.startsWith('blob:')) URL.revokeObjectURL(url);
   }, 200);
 }
 
-function canvasToBlob(canvas, type, quality) {
-  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+async function captureBlob(element, type, quality) {
+  const { default: domtoimage } = await import('dom-to-image-more');
+  const target = element.querySelector('.bracket-container') ?? element;
+  const isDark = document.documentElement.classList.contains('dark');
+  const bgcolor = isDark ? '#1e293b' : '#ffffff';
+  const scale = 2;
+
+  if (type === 'image/jpeg') {
+    return domtoimage.toBlob(target, { scale, bgcolor, type: 'image/jpeg', quality: quality ?? 0.92 });
+  }
+  return domtoimage.toBlob(target, { scale, bgcolor });
 }
 
 export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
@@ -47,8 +44,7 @@ export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
     if (!targetRef.current) return;
     setLoading('png'); setOpen(false);
     try {
-      const canvas = await captureElement(targetRef.current);
-      const blob = await canvasToBlob(canvas, 'image/png');
+      const blob = await captureBlob(targetRef.current, 'image/png');
       triggerDownload(URL.createObjectURL(blob), `${filename}.png`);
     } catch (e) {
       console.error('PNG 다운로드 실패:', e);
@@ -60,8 +56,7 @@ export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
     if (!targetRef.current) return;
     setLoading('jpg'); setOpen(false);
     try {
-      const canvas = await captureElement(targetRef.current);
-      const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+      const blob = await captureBlob(targetRef.current, 'image/jpeg', 0.92);
       triggerDownload(URL.createObjectURL(blob), `${filename}.jpg`);
     } catch (e) {
       console.error('JPG 다운로드 실패:', e);
@@ -73,17 +68,21 @@ export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
     if (!targetRef.current) return;
     setLoading('pdf'); setOpen(false);
     try {
-      const canvas = await captureElement(targetRef.current);
-      const { jsPDF } = await import('jspdf');
-      const blob = await canvasToBlob(canvas, 'image/png');
-      const imgDataUrl = await new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
+      const blob = await captureBlob(targetRef.current, 'image/png');
+      const imgUrl = URL.createObjectURL(blob);
+
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imgUrl;
       });
 
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
+      const imgWidth = img.naturalWidth;
+      const imgHeight = img.naturalHeight;
+      URL.revokeObjectURL(imgUrl);
+
+      const { jsPDF } = await import('jspdf');
       const isLandscape = imgWidth > imgHeight;
       const pdf = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait', unit: 'px', format: 'a4' });
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -91,8 +90,15 @@ export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
       const ratio = Math.min(pageWidth / imgWidth, pageHeight / imgHeight);
       const w = imgWidth * ratio;
       const h = imgHeight * ratio;
-      pdf.addImage(imgDataUrl, 'PNG', (pageWidth - w) / 2, (pageHeight - h) / 2, w, h);
 
+      const reader = new FileReader();
+      const imgDataUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      pdf.addImage(imgDataUrl, 'PNG', (pageWidth - w) / 2, (pageHeight - h) / 2, w, h);
       const pdfBlob = pdf.output('blob');
       triggerDownload(URL.createObjectURL(pdfBlob), `${filename}.pdf`);
     } catch (e) {
