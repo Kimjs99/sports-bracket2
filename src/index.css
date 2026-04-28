@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+/* Class-based dark mode: .dark on <html> activates dark: variants */
+@custom-variant dark (&:where(.dark, .dark *));
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Pretendard', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Bracket tree layout */
+.bracket-scroll {
+  overflow-x: auto;
+  padding-bottom: 16px;
+}
+
+.bracket-container {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-width: max-content;
+  gap: 0;
+}
+
+.round-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 172px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.round-column:last-child {
+  border-right: none;
+}
+
+.round-header {
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #475569;
+  padding: 8px 4px;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  letter-spacing: 0.5px;
+}
+
+.match-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-around;
+  padding: 8px 0;
+  gap: 4px;
+}
+
+.match-pair {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.match-connector {
+  display: flex;
+  flex-direction: column;
+  width: 20px;
+  flex-shrink: 0;
+  align-self: stretch;
+  position: relative;
+}
+
+/* Dark mode: bracket tree CSS class overrides */
+.dark .round-column {
+  border-right-color: #334155;
+}
+.dark .round-header {
+  background: #1e293b;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+.dark body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; margin: 0; }
+  .bracket-scroll { overflow: visible; }
+  .bracket-container { page-break-inside: avoid; }
+  button { display: none !important; }
+}
