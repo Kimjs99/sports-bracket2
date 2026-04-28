@@ -2,17 +2,18 @@ import { useContext, useState, useEffect } from 'react';
 import {
   Plus, Trophy, Lock, Settings, Swords, CalendarDays,
   Users, Layers, Bell, Search, MapPin, Clock, Trash2, HelpCircle,
-  Share2, Check, LinkIcon,
+  Share2, Check, LinkIcon, RotateCcw, AlertTriangle,
 } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { SCREENS, MATCH_STATUS } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
 import { loadTournament, saveTournament } from '../utils/storage';
+import { generateBracket } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
 import HelpModal from './ui/HelpModal';
+import ConfirmDialog from './ui/ConfirmDialog';
 import { buildShareUrl } from '../utils/shareUtils';
-import { loadTournament as loadTournamentById } from '../utils/storage';
 
 const LEVELS = ['고등', '중등'];
 const LEVEL_COLOR = {
@@ -261,9 +262,26 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
   const [copied, setCopied] = useState(false);
+  const [confirmResetBracket, setConfirmResetBracket] = useState(false);
+
+  function resetBracket() {
+    const data = loadTournament(currentId);
+    if (!data) return;
+    const bracketData = generateBracket(data.teams, data.meta.seed);
+    const updated = {
+      ...data,
+      meta: { ...data.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
+      bracket: { rounds: bracketData.rounds },
+    };
+    saveTournament(updated);
+    setTournament(updated);
+    dispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST });
+    setConfirmResetBracket(false);
+    setActiveTab('overview');
+  }
 
   function copyShareLink() {
-    const data = loadTournamentById(currentId);
+    const data = loadTournament(currentId);
     if (!data) return;
     const url = buildShareUrl(data);
     if (!url) return;
@@ -407,6 +425,16 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
             </div>
           )}
 
+          {confirmResetBracket && (
+            <ConfirmDialog
+              title="대진 초기화"
+              message="현재 대진의 모든 경기 결과와 일정이 초기화됩니다. 팀 구성은 유지됩니다. 이 작업은 되돌릴 수 없습니다."
+              confirmLabel="초기화"
+              onConfirm={resetBracket}
+              onCancel={() => setConfirmResetBracket(false)}
+            />
+          )}
+
           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2 flex-wrap">
             {isAdmin && (
               <>
@@ -431,10 +459,16 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
               {copied ? <><Check size={12} /> 복사됨!</> : <><Share2 size={12} /> 공유 링크</>}
             </button>
             {isAdmin && (
-              <button onClick={handleNew}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors ml-auto">
-                <Plus size={12} /> 새 대진
-              </button>
+              <>
+                <button onClick={handleNew}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors ml-auto">
+                  <Plus size={12} /> 새 대진
+                </button>
+                <button onClick={() => setConfirmResetBracket(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-red-200 dark:border-red-900 text-red-500 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 font-medium transition-colors">
+                  <RotateCcw size={12} /> 대진 초기화
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -676,6 +710,7 @@ export default function Home() {
   const { isLoggedIn, requireAdmin, setModalOpen } = useAdmin();
   const [activeLevel, setActiveLevel] = useState('고등');
   const [helpOpen, setHelpOpen] = useState(false);
+  const [confirmResetAll, setConfirmResetAll] = useState(false);
 
   useEffect(() => {
     if (importedLevel) {
@@ -765,7 +800,42 @@ export default function Home() {
             </div>
           );
         })}
+
+        {/* 전체 초기화 — admin only */}
+        {isLoggedIn && tournamentList.length > 0 && (
+          <div className="max-w-4xl mx-auto px-4 mt-8 mb-4">
+            <div className="border border-red-200 dark:border-red-900/50 rounded-2xl p-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-start gap-3">
+                  <div className="bg-red-100 dark:bg-red-900/30 rounded-full p-2 shrink-0 mt-0.5">
+                    <AlertTriangle size={14} className="text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">전체 초기화</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">중등부·고등부 모든 대진 데이터를 삭제합니다.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setConfirmResetAll(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+                >
+                  <RotateCcw size={12} /> 전체 초기화
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {confirmResetAll && (
+        <ConfirmDialog
+          title="전체 초기화"
+          message="중등부·고등부의 모든 대진 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
+          confirmLabel="전체 삭제"
+          onConfirm={() => dispatch({ type: ACTIONS.RESET_ALL_TOURNAMENTS })}
+          onCancel={() => setConfirmResetAll(false)}
+        />
+      )}
     </div>
   );
 }

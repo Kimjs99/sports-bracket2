@@ -47,6 +47,13 @@ export function loadAllTournaments() {
     .sort((a, b) => b.meta.createdAt.localeCompare(a.meta.createdAt));
 }
 
+export function clearAllTournaments() {
+  try {
+    getIds().forEach(id => localStorage.removeItem(DATA_PREFIX + id));
+    localStorage.removeItem(IDS_KEY);
+  } catch {}
+}
+
 // Migrate from old single-tournament format (runs once, then removes old key)
 export function migrateFromLegacy() {
   try {

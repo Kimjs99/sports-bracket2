@@ -1,7 +1,7 @@
 import { ACTIONS } from './actions';
 import { SCREENS, SPORT_NAME, MAX_HISTORY, MATCH_STATUS } from '../constants';
 import { generateBracket, submitMatchResult } from '../utils/tournament';
-import { saveTournament, loadTournament, deleteTournament, loadAllTournaments } from '../utils/storage';
+import { saveTournament, loadTournament, deleteTournament, loadAllTournaments, clearAllTournaments } from '../utils/storage';
 
 export const initialState = {
   currentScreen: SCREENS.HOME,
@@ -229,6 +229,27 @@ export function reducer(state, action) {
 
     case ACTIONS.TOGGLE_RESHUFFLE_CONFIRM:
       return { ...state, ui: { ...state.ui, reshuffleConfirmOpen: action.payload.open } };
+
+    case ACTIONS.RESET_BRACKET: {
+      if (!state.tournament) return state;
+      const bracketData = generateBracket(state.tournament.teams, state.tournament.meta.seed);
+      const updated = {
+        ...state.tournament,
+        meta: { ...state.tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
+        bracket: { rounds: bracketData.rounds },
+      };
+      saveTournament(updated);
+      const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
+      return { ...state, tournament: updated, tournamentList: newList };
+    }
+
+    case ACTIONS.RESET_ALL_TOURNAMENTS:
+      clearAllTournaments();
+      return {
+        ...initialState,
+        tournamentList: [],
+        currentScreen: SCREENS.HOME,
+      };
 
     case ACTIONS.RESET_TOURNAMENT:
       return {
