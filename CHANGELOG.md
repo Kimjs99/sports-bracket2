@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.1] - 2026-05-01
+
+### 🐛 Bug Fixes
+- ESLint 오류 9건 해결: MatchCard TeamRow 렌더 내 컴포넌트 정의, BracketTree 미사용 Connector, tournament.js 미사용 파라미터 등 (`4214177`)
+- Supabase DB 연동 안정성 개선: asyncDispatch 전체 try/catch 추가, hasAdmin() `.maybeSingle()` 교체, deleteTournament/clearAllTournaments 실패 시 throw, AdminLoginModal 무한 스피너 방지, 환경변수 누락 경고 (`fe8ec92`)
+
+### 📝 Documentation
+- CLAUDE.md 전면 개선: storage 에러 처리 계약, shareUtils, constants, asyncDispatch 원칙 문서화
+
+---
+
 ## [v0.2.0] - 2026-05-01
 
 ### ✨ Features
