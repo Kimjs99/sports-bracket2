@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.0] - 2026-05-01
+
+### ✨ Features
+- localStorage → Supabase 마이그레이션: 기기 간 계정·대진 데이터 동기화 (`339e693`)
+- 관리자 전용 대진 초기화·전체 초기화 기능 추가 (`52de497`)
+- 공유 링크로 다른 기기에서 대진 확인 가능하도록 구현 (`3132ab1`)
+- 홈 화면에 관리자/게스트 사용 가이드 모달 추가 (`cff52f2`)
+
+### 🐛 Bug Fixes
+- dom-to-image-more 패키지 의존성 누락으로 인한 GitHub Actions 빌드 실패 수정 (`d5ef90b`)
+- 브라켓 다운로드 라이브러리를 html2canvas → dom-to-image-more로 교체하여 브라우저 호환성 개선 (`0374856`, `8334f56`)
+
+### 📝 Documentation
+- CLAUDE.md — Supabase 마이그레이션 반영하여 전면 업데이트 (`07d99d7`)
+- 관리자·게스트 사용 가이드 README 작성 (`07ec872`)
+
+### 🔧 Chores
+- GitHub Pages 배포 워크플로우(deploy.yml) 설정 추가 (`1becf76`)
+
+---
+
 ## [v0.1.0] - 2026-04-28
 
 > 초기 릴리즈 — 학교스포츠클럽 농구 토너먼트 대진 관리 시스템
