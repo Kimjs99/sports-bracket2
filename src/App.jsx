@@ -52,34 +52,38 @@ function AppInner({ theme, setTheme }) {
 
   // 비동기 작업이 필요한 액션을 처리하는 asyncDispatch
   const asyncDispatch = useCallback(async (action) => {
-    switch (action.type) {
-      case ACTIONS.LOAD_TOURNAMENT_LIST: {
-        const all = await loadAllTournaments();
-        dispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST, payload: { list: all.map(makeSummary) } });
-        break;
+    try {
+      switch (action.type) {
+        case ACTIONS.LOAD_TOURNAMENT_LIST: {
+          const all = await loadAllTournaments();
+          dispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST, payload: { list: all.map(makeSummary) } });
+          break;
+        }
+        case ACTIONS.BACK_TO_HOME: {
+          const all = await loadAllTournaments();
+          dispatch({ type: ACTIONS.BACK_TO_HOME, payload: { list: all.map(makeSummary) } });
+          break;
+        }
+        case ACTIONS.SELECT_TOURNAMENT: {
+          const data = await loadTournament(action.payload.id);
+          dispatch({ ...action, payload: { ...action.payload, data } });
+          break;
+        }
+        case ACTIONS.DELETE_TOURNAMENT: {
+          await deleteTournament(action.payload.id);
+          dispatch(action);
+          break;
+        }
+        case ACTIONS.RESET_ALL_TOURNAMENTS: {
+          await clearAllTournaments();
+          dispatch(action);
+          break;
+        }
+        default:
+          dispatch(action);
       }
-      case ACTIONS.BACK_TO_HOME: {
-        const all = await loadAllTournaments();
-        dispatch({ type: ACTIONS.BACK_TO_HOME, payload: { list: all.map(makeSummary) } });
-        break;
-      }
-      case ACTIONS.SELECT_TOURNAMENT: {
-        const data = await loadTournament(action.payload.id);
-        dispatch({ ...action, payload: { ...action.payload, data } });
-        break;
-      }
-      case ACTIONS.DELETE_TOURNAMENT: {
-        await deleteTournament(action.payload.id);
-        dispatch(action);
-        break;
-      }
-      case ACTIONS.RESET_ALL_TOURNAMENTS: {
-        await clearAllTournaments();
-        dispatch(action);
-        break;
-      }
-      default:
-        dispatch(action);
+    } catch (e) {
+      console.error('[asyncDispatch]', action.type, e);
     }
   }, []);
 

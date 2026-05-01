@@ -15,7 +15,9 @@ export default function AdminLoginModal() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    hasAdmin().then(exists => setIsCreating(!exists));
+    hasAdmin()
+      .then(exists => setIsCreating(!exists))
+      .catch(() => setIsCreating(false));
   }, []);
 
   function close() { setModalOpen(false); }
