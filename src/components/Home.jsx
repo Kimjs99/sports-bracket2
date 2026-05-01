@@ -297,14 +297,17 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
         setCurrentId(id);
       });
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTournament(null);
     }
   }, [currentId, summaryList]);
 
   useEffect(() => {
     if (summaryList.length > 0 && !summaryList.find(t => t.id === currentId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentId(summaryList[0].id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summaryList]);
 
   function navigate(targetScreen) {
@@ -714,6 +717,7 @@ export default function Home() {
 
   useEffect(() => {
     if (importedLevel) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveLevel(importedLevel);
       return;
     }
@@ -723,6 +727,7 @@ export default function Home() {
         setActiveLevel('중등');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [importedLevel]);
 
   return (

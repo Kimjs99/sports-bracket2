@@ -13,6 +13,7 @@ import Dashboard from './components/Dashboard';
 import AdminLoginModal from './components/ui/AdminLoginModal';
 import GlobalBar from './components/GlobalBar';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AppContext = createContext(null);
 
 function AppInner({ theme, setTheme }) {
