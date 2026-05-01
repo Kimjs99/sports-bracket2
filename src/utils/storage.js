@@ -31,10 +31,10 @@ export async function loadAllTournaments() {
 
 export async function deleteTournament(id) {
   const { error } = await supabase.from('tournaments').delete().eq('id', id);
-  if (error) console.error('deleteTournament error:', error);
+  if (error) throw error;
 }
 
 export async function clearAllTournaments() {
   const { error } = await supabase.from('tournaments').delete().not('id', 'is', null);
-  if (error) console.error('clearAllTournaments error:', error);
+  if (error) throw error;
 }

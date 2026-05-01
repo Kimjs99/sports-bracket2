@@ -1,39 +1,5 @@
 import MatchCard from './MatchCard';
 
-// Renders vertical connector between two match cards
-function Connector({ isTop }) {
-  return (
-    <div
-      style={{
-        width: 20,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-      }}
-    >
-      <div
-        style={{
-          width: 2,
-          background: '#cbd5e1',
-          flex: 1,
-          marginLeft: 0,
-          opacity: isTop ? 1 : 0,
-        }}
-      />
-      <div style={{ width: 20, height: 2, background: '#cbd5e1' }} />
-      <div
-        style={{
-          width: 2,
-          background: '#cbd5e1',
-          flex: 1,
-          marginLeft: 0,
-          opacity: isTop ? 0 : 1,
-        }}
-      />
-    </div>
-  );
-}
-
 function RoundColumn({ round, isLast }) {
   const matches = round.matches;
 

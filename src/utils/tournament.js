@@ -33,7 +33,7 @@ export function distributeByes(bracketSize, byeCount) {
   return positions.sort((a, b) => a - b);
 }
 
-function buildFirstRoundMatches(shuffledTeams, byePairIndices, bracketSize, roundName) {
+function buildFirstRoundMatches(shuffledTeams, byePairIndices, bracketSize) {
   const totalPairs = bracketSize / 2;
   const byeSet = new Set(byePairIndices);
   const matches = [];

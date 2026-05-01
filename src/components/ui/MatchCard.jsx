@@ -1,6 +1,29 @@
 import { Trophy, ArrowRight, Calendar, Clock } from 'lucide-react';
 import { MATCH_STATUS } from '../../constants';
 
+function TeamRow({ name, score, isWinner, isDone }) {
+  const isEmpty = name === null || name === undefined;
+  return (
+    <div
+      className={`flex items-center justify-between px-2 py-[6px] text-xs
+        ${isWinner ? 'bg-orange-50 dark:bg-orange-900/20 font-bold text-orange-700 dark:text-orange-400' : ''}
+        ${isEmpty ? 'text-gray-300 dark:text-gray-600' : ''}
+        ${!isWinner && !isEmpty ? 'text-gray-700 dark:text-gray-300' : ''}
+      `}
+    >
+      <span className="truncate" style={{ maxWidth: 100 }}>
+        {isEmpty ? '—' : name}
+      </span>
+      {isDone && !isEmpty && (
+        <span className={`ml-1 font-mono text-[11px] ${isWinner ? 'text-orange-700 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
+          {score ?? 0}
+        </span>
+      )}
+      {isWinner && isDone && <Trophy size={10} className="ml-1 text-orange-400 flex-shrink-0" />}
+    </div>
+  );
+}
+
 function ByePassCard({ teamName }) {
   return (
     <div style={{ minWidth: 148, margin: '0 4px' }} className="overflow-hidden rounded-lg">
@@ -30,29 +53,6 @@ export default function MatchCard({ match }) {
     return <ByePassCard teamName={home} />;
   }
 
-  const TeamRow = ({ name, score, isWinner }) => {
-    const isEmpty = name === null || name === undefined;
-    return (
-      <div
-        className={`flex items-center justify-between px-2 py-[6px] text-xs
-          ${isWinner ? 'bg-orange-50 dark:bg-orange-900/20 font-bold text-orange-700 dark:text-orange-400' : ''}
-          ${isEmpty ? 'text-gray-300 dark:text-gray-600' : ''}
-          ${!isWinner && !isEmpty ? 'text-gray-700 dark:text-gray-300' : ''}
-        `}
-      >
-        <span className="truncate" style={{ maxWidth: 100 }}>
-          {isEmpty ? '—' : name}
-        </span>
-        {isDone && !isEmpty && (
-          <span className={`ml-1 font-mono text-[11px] ${isWinner ? 'text-orange-700 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}`}>
-            {score ?? 0}
-          </span>
-        )}
-        {isWinner && isDone && <Trophy size={10} className="ml-1 text-orange-400 flex-shrink-0" />}
-      </div>
-    );
-  };
-
   const borderColor = isDone ? 'border-green-200 dark:border-green-800' : 'border-gray-200 dark:border-gray-700';
   const bgColor = isDone ? 'bg-green-50 dark:bg-green-900/10' : 'bg-white dark:bg-gray-800';
 
@@ -61,9 +61,9 @@ export default function MatchCard({ match }) {
       className={`border ${borderColor} ${bgColor} rounded-lg shadow-sm mx-1 overflow-hidden`}
       style={{ minWidth: 148 }}
     >
-      <TeamRow name={home} score={homeScore} isWinner={isDone && winner === home} />
+      <TeamRow name={home} score={homeScore} isWinner={isDone && winner === home} isDone={isDone} />
       <div className="border-t border-gray-100 dark:border-gray-700" />
-      <TeamRow name={away} score={awayScore} isWinner={isDone && winner === away} />
+      <TeamRow name={away} score={awayScore} isWinner={isDone && winner === away} isDone={isDone} />
       {(date || time) && (
         <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 px-2 py-1.5 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
           {date && (
