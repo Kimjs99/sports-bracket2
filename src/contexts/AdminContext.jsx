@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { verifyAdmin, saveAdmin } from '../utils/adminStorage';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { saveAdmin, verifyAdmin, signOutAdmin } from '../utils/adminStorage';
+import { supabase } from '../lib/supabase';
 
 const Ctx = createContext(null);
 
@@ -9,27 +10,54 @@ export function AdminProvider({ children }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [pending, setPending] = useState(null);
 
-  const login = useCallback((u, p) => {
-    if (verifyAdmin(u, p)) {
-      setIsLoggedIn(true);
-      setUsername(u);
-      return true;
-    }
-    return false;
+  // 페이지 로드 시 기존 세션 복원
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+        setUsername(session.user.email);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+        setUsername(session.user.email);
+      } else {
+        setIsLoggedIn(false);
+        setUsername(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const logout = useCallback(() => {
+  const login = useCallback(async (email, password) => {
+    const ok = await verifyAdmin(email, password);
+    if (ok) {
+      setIsLoggedIn(true);
+      setUsername(email);
+    }
+    return ok;
+  }, []);
+
+  const logout = useCallback(async () => {
+    await signOutAdmin();
     setIsLoggedIn(false);
     setUsername(null);
   }, []);
 
-  const createAccount = useCallback((u, p) => {
-    saveAdmin(u, p);
-    setIsLoggedIn(true);
-    setUsername(u);
+  const createAccount = useCallback(async (email, password) => {
+    try {
+      await saveAdmin(email, password);
+      setIsLoggedIn(true);
+      setUsername(email);
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
-  // If already logged in, run action immediately; otherwise show modal first.
   const requireAdmin = useCallback((action) => {
     if (isLoggedIn) { action?.(); }
     else { setPending(() => action); setModalOpen(true); }

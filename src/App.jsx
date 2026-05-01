@@ -1,8 +1,8 @@
-import { createContext, useReducer, useEffect, useState, useCallback } from 'react';
-import { reducer, initialState } from './store/reducer';
+import { createContext, useReducer, useEffect, useRef, useState, useCallback } from 'react';
+import { reducer, initialState, makeSummary } from './store/reducer';
 import { ACTIONS } from './store/actions';
 import { SCREENS } from './constants';
-import { migrateFromLegacy, saveTournament } from './utils/storage';
+import { saveTournament, loadTournament, loadAllTournaments, deleteTournament, clearAllTournaments } from './utils/storage';
 import { readShareParam, clearShareParam } from './utils/shareUtils';
 import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import Home from './components/Home';
@@ -19,25 +19,73 @@ function AppInner({ theme, setTheme }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { modalOpen } = useAdmin();
   const [importedLevel, setImportedLevel] = useState(null);
+  const tournamentRef = useRef(null);
 
+  // 앱 초기화: Supabase에서 대진 목록 로드
   useEffect(() => {
-    migrateFromLegacy();
+    async function init() {
+      const shared = readShareParam();
+      if (shared?.meta?.id) {
+        await saveTournament(shared);
+        clearShareParam();
+        setImportedLevel(shared.meta.schoolLevel ?? null);
+        setTimeout(() => setImportedLevel(null), 4000);
+      }
 
-    const shared = readShareParam();
-    if (shared?.meta?.id) {
-      saveTournament(shared);
-      clearShareParam();
-      setImportedLevel(shared.meta.schoolLevel ?? null);
-      setTimeout(() => setImportedLevel(null), 4000);
+      const all = await loadAllTournaments();
+      dispatch({
+        type: ACTIONS.LOAD_TOURNAMENT_LIST,
+        payload: { list: all.map(makeSummary) },
+      });
     }
+    init();
+  }, []);
 
-    dispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST });
+  // state.tournament 변경 시 Supabase에 저장 (GENERATE_BRACKET, RESHUFFLE, SUBMIT_RESULT 등)
+  useEffect(() => {
+    if (state.tournament && state.tournament !== tournamentRef.current) {
+      saveTournament(state.tournament).catch(console.error);
+    }
+    tournamentRef.current = state.tournament;
+  }, [state.tournament]);
+
+  // 비동기 작업이 필요한 액션을 처리하는 asyncDispatch
+  const asyncDispatch = useCallback(async (action) => {
+    switch (action.type) {
+      case ACTIONS.LOAD_TOURNAMENT_LIST: {
+        const all = await loadAllTournaments();
+        dispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST, payload: { list: all.map(makeSummary) } });
+        break;
+      }
+      case ACTIONS.BACK_TO_HOME: {
+        const all = await loadAllTournaments();
+        dispatch({ type: ACTIONS.BACK_TO_HOME, payload: { list: all.map(makeSummary) } });
+        break;
+      }
+      case ACTIONS.SELECT_TOURNAMENT: {
+        const data = await loadTournament(action.payload.id);
+        dispatch({ ...action, payload: { ...action.payload, data } });
+        break;
+      }
+      case ACTIONS.DELETE_TOURNAMENT: {
+        await deleteTournament(action.payload.id);
+        dispatch(action);
+        break;
+      }
+      case ACTIONS.RESET_ALL_TOURNAMENTS: {
+        await clearAllTournaments();
+        dispatch(action);
+        break;
+      }
+      default:
+        dispatch(action);
+    }
   }, []);
 
   const screen = state.currentScreen;
 
   return (
-    <AppContext.Provider value={{ state, dispatch, importedLevel }}>
+    <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
       <GlobalBar theme={theme} setTheme={setTheme} />
       {screen === SCREENS.HOME && <Home />}
       {screen === SCREENS.SETUP && <Setup />}

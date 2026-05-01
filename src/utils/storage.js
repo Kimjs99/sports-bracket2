@@ -1,68 +1,40 @@
-import { STORAGE_KEY } from '../constants';
+import { supabase } from '../lib/supabase';
 
-const IDS_KEY = 'tournament_ids_v2';
-const DATA_PREFIX = 'tournament_data_';
-
-function getIds() {
-  try { return JSON.parse(localStorage.getItem(IDS_KEY) ?? '[]'); }
-  catch { return []; }
+export async function saveTournament(data) {
+  const { error } = await supabase.from('tournaments').upsert({
+    id: data.meta.id,
+    school_level: data.meta.schoolLevel,
+    data: data,
+    created_at: data.meta.createdAt,
+  });
+  if (error) console.error('saveTournament error:', error);
 }
 
-function setIds(ids) {
-  try { localStorage.setItem(IDS_KEY, JSON.stringify(ids)); }
-  catch (e) { if (e.name !== 'QuotaExceededError' && e.name !== 'SecurityError') throw e; }
+export async function loadTournament(id) {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('data')
+    .eq('id', id)
+    .single();
+  if (error || !data) return null;
+  return data.data;
 }
 
-export function saveTournament(data) {
-  try {
-    const key = DATA_PREFIX + data.meta.id;
-    localStorage.setItem(key, JSON.stringify(data));
-    const ids = getIds();
-    if (!ids.includes(data.meta.id)) setIds([...ids, data.meta.id]);
-  } catch (e) {
-    if (e.name === 'QuotaExceededError') console.error('저장 공간 부족:', e);
-    else if (e.name === 'SecurityError') console.warn('프라이빗 모드에서는 저장이 제한됩니다.');
-    else console.error('저장 실패:', e);
-  }
+export async function loadAllTournaments() {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select('data')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map(row => row.data);
 }
 
-export function loadTournament(id) {
-  try {
-    const raw = localStorage.getItem(DATA_PREFIX + id);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+export async function deleteTournament(id) {
+  const { error } = await supabase.from('tournaments').delete().eq('id', id);
+  if (error) console.error('deleteTournament error:', error);
 }
 
-export function deleteTournament(id) {
-  try {
-    localStorage.removeItem(DATA_PREFIX + id);
-    setIds(getIds().filter(i => i !== id));
-  } catch {}
-}
-
-export function loadAllTournaments() {
-  return getIds()
-    .map(id => loadTournament(id))
-    .filter(Boolean)
-    .sort((a, b) => b.meta.createdAt.localeCompare(a.meta.createdAt));
-}
-
-export function clearAllTournaments() {
-  try {
-    getIds().forEach(id => localStorage.removeItem(DATA_PREFIX + id));
-    localStorage.removeItem(IDS_KEY);
-  } catch {}
-}
-
-// Migrate from old single-tournament format (runs once, then removes old key)
-export function migrateFromLegacy() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (data?.meta?.id) {
-      saveTournament(data);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  } catch {}
+export async function clearAllTournaments() {
+  const { error } = await supabase.from('tournaments').delete().not('id', 'is', null);
+  if (error) console.error('clearAllTournaments error:', error);
 }

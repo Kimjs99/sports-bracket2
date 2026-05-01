@@ -264,7 +264,7 @@ function AdminGate({ message, onLogin }) {
 }
 
 export default function Draw() {
-  const { state, dispatch } = useContext(AppContext);
+  const { state, dispatch, asyncDispatch } = useContext(AppContext);
   const { tournament, ui } = state;
   const { requireAdmin, isLoggedIn, setModalOpen } = useAdmin();
   const [activeTab, setActiveTab] = useState('bracket');
@@ -292,7 +292,7 @@ export default function Draw() {
         <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => dispatch({ type: ACTIONS.BACK_TO_HOME })}
+              onClick={() => asyncDispatch({ type: ACTIONS.BACK_TO_HOME })}
               className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-1"
             >
               <ChevronLeft size={15} />

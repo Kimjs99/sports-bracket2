@@ -137,7 +137,7 @@ function MatchResultCard({ match, roundName, dispatch }) {
 }
 
 export default function MatchPlay() {
-  const { state, dispatch } = useContext(AppContext);
+  const { state, dispatch, asyncDispatch } = useContext(AppContext);
   const { tournament } = state;
   const { isLoggedIn, setModalOpen } = useAdmin();
   const [activeRound, setActiveRound] = useState(0);
@@ -163,7 +163,7 @@ export default function MatchPlay() {
             관리자 로그인
           </button>
           <button
-            onClick={() => dispatch({ type: ACTIONS.BACK_TO_HOME })}
+            onClick={() => asyncDispatch({ type: ACTIONS.BACK_TO_HOME })}
             className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center justify-center gap-1"
           >
             <ChevronLeft size={14} /> 홈으로 돌아가기
@@ -186,7 +186,7 @@ export default function MatchPlay() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => dispatch({ type: ACTIONS.BACK_TO_HOME })}
+              onClick={() => asyncDispatch({ type: ACTIONS.BACK_TO_HOME })}
               className="flex items-center gap-0.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1"
               title="전체 목록"
             >
@@ -205,7 +205,7 @@ export default function MatchPlay() {
             <div className="text-xs text-gray-500 dark:text-gray-400">{doneMatches}/{totalMatches} 경기 완료</div>
           </div>
           <button
-            onClick={() => dispatch({ type: ACTIONS.BACK_TO_HOME })}
+            onClick={() => asyncDispatch({ type: ACTIONS.BACK_TO_HOME })}
             className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700"
           >
             홈 <ChevronRight size={16} />

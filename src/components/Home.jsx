@@ -255,7 +255,7 @@ function EmptyLevel({ level, isLoggedIn, onNew, onLogin }) {
 
 // ─── LevelPanel ───────────────────────────────────────────────────────────────
 
-function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setModalOpen }) {
+function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requireAdmin, setModalOpen }) {
   const [currentId, setCurrentId] = useState(() => summaryList[0]?.id ?? null);
   const [tournament, setTournament] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -264,26 +264,24 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
   const [copied, setCopied] = useState(false);
   const [confirmResetBracket, setConfirmResetBracket] = useState(false);
 
-  function resetBracket() {
-    const data = loadTournament(currentId);
-    if (!data) return;
-    const bracketData = generateBracket(data.teams, data.meta.seed);
+  async function resetBracket() {
+    if (!tournament) return;
+    const bracketData = generateBracket(tournament.teams, tournament.meta.seed);
     const updated = {
-      ...data,
-      meta: { ...data.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
+      ...tournament,
+      meta: { ...tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
       bracket: { rounds: bracketData.rounds },
     };
-    saveTournament(updated);
+    await saveTournament(updated);
     setTournament(updated);
-    dispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST });
+    asyncDispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST });
     setConfirmResetBracket(false);
     setActiveTab('overview');
   }
 
   function copyShareLink() {
-    const data = loadTournament(currentId);
-    if (!data) return;
-    const url = buildShareUrl(data);
+    if (!tournament) return;
+    const url = buildShareUrl(tournament);
     if (!url) return;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
@@ -294,8 +292,10 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
   useEffect(() => {
     const id = currentId ?? summaryList[0]?.id;
     if (id) {
-      setTournament(loadTournament(id));
-      setCurrentId(id);
+      loadTournament(id).then(data => {
+        setTournament(data);
+        setCurrentId(id);
+      });
     } else {
       setTournament(null);
     }
@@ -308,7 +308,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
   }, [summaryList]);
 
   function navigate(targetScreen) {
-    dispatch({ type: ACTIONS.SELECT_TOURNAMENT, payload: { id: currentId, targetScreen } });
+    asyncDispatch({ type: ACTIONS.SELECT_TOURNAMENT, payload: { id: currentId, targetScreen } });
   }
 
   function handleNew() {
@@ -319,7 +319,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
     });
   }
 
-  function addNotice() {
+  async function addNotice() {
     if (!tournament || !noticeTitle.trim() || !noticeContent.trim()) return;
     const notice = {
       id: `n${Date.now()}`,
@@ -328,16 +328,16 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
       createdAt: new Date().toISOString(),
     };
     const updated = { ...tournament, notices: [notice, ...tournament.notices] };
-    saveTournament(updated);
+    await saveTournament(updated);
     setTournament(updated);
     setNoticeTitle('');
     setNoticeContent('');
   }
 
-  function deleteNotice(id) {
+  async function deleteNotice(id) {
     if (!tournament) return;
     const updated = { ...tournament, notices: tournament.notices.filter(n => n.id !== id) };
-    saveTournament(updated);
+    await saveTournament(updated);
     setTournament(updated);
   }
 
@@ -705,7 +705,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, requireAdmin, setMo
 // ─── Home (root) ──────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { state, dispatch, importedLevel } = useContext(AppContext);
+  const { state, dispatch, asyncDispatch, importedLevel } = useContext(AppContext);
   const { tournamentList } = state;
   const { isLoggedIn, requireAdmin, setModalOpen } = useAdmin();
   const [activeLevel, setActiveLevel] = useState('고등');
@@ -794,6 +794,7 @@ export default function Home() {
                 summaryList={levelList}
                 isAdmin={isLoggedIn}
                 dispatch={dispatch}
+                asyncDispatch={asyncDispatch}
                 requireAdmin={requireAdmin}
                 setModalOpen={setModalOpen}
               />
@@ -832,7 +833,7 @@ export default function Home() {
           title="전체 초기화"
           message="중등부·고등부의 모든 대진 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
           confirmLabel="전체 삭제"
-          onConfirm={() => dispatch({ type: ACTIONS.RESET_ALL_TOURNAMENTS })}
+          onConfirm={() => asyncDispatch({ type: ACTIONS.RESET_ALL_TOURNAMENTS })}
           onCancel={() => setConfirmResetAll(false)}
         />
       )}

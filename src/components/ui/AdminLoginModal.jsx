@@ -1,37 +1,49 @@
-import { useState } from 'react';
-import { X, User, Eye, EyeOff, ShieldCheck, KeyRound, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Mail, Eye, EyeOff, ShieldCheck, KeyRound, LogOut, Loader } from 'lucide-react';
 import { useAdmin } from '../../contexts/AdminContext';
 import { hasAdmin } from '../../utils/adminStorage';
 
 export default function AdminLoginModal() {
   const { isLoggedIn, username, login, logout, createAccount, setModalOpen, onSuccess } = useAdmin();
 
-  const [isCreating] = useState(() => !hasAdmin());
-  const [u, setU] = useState('');
+  const [isCreating, setIsCreating] = useState(null); // null = 로딩 중
+  const [email, setEmail] = useState('');
   const [p, setP] = useState('');
   const [p2, setP2] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    hasAdmin().then(exists => setIsCreating(!exists));
+  }, []);
 
   function close() { setModalOpen(false); }
 
-  function submit() {
+  async function submit() {
     setError('');
-    if (isCreating) {
-      if (!u.trim()) { setError('아이디를 입력하세요.'); return; }
-      if (p.length < 4) { setError('비밀번호는 4자 이상이어야 합니다.'); return; }
-      if (p !== p2) { setError('비밀번호가 일치하지 않습니다.'); return; }
-      createAccount(u.trim(), p);
-      onSuccess();
-    } else {
-      const ok = login(u, p);
-      if (ok) { onSuccess(); }
-      else { setError('아이디 또는 비밀번호가 올바르지 않습니다.'); }
+    setLoading(true);
+    try {
+      if (isCreating) {
+        if (!email.trim()) { setError('이메일을 입력하세요.'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('올바른 이메일 형식이 아닙니다.'); return; }
+        if (p.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return; }
+        if (p !== p2) { setError('비밀번호가 일치하지 않습니다.'); return; }
+        const ok = await createAccount(email.trim(), p);
+        if (ok) { onSuccess(); }
+        else { setError('계정 생성에 실패했습니다. 이미 사용 중인 이메일일 수 있습니다.'); }
+      } else {
+        const ok = await login(email, p);
+        if (ok) { onSuccess(); }
+        else { setError('이메일 또는 비밀번호가 올바르지 않습니다.'); }
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     close();
   }
 
@@ -45,7 +57,7 @@ export default function AdminLoginModal() {
               <ShieldCheck size={15} className="text-blue-600 dark:text-blue-400" />
             </div>
             <span className="font-bold text-gray-900 dark:text-gray-100 text-sm">
-              {isLoggedIn ? '관리자 설정' : isCreating ? '관리자 계정 만들기' : '관리자 로그인'}
+              {isLoggedIn ? '관리자 설정' : isCreating === null ? '관리자' : isCreating ? '관리자 계정 만들기' : '관리자 로그인'}
             </span>
           </div>
           <button onClick={close} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">
@@ -74,6 +86,10 @@ export default function AdminLoginModal() {
                 닫기
               </button>
             </div>
+          ) : isCreating === null ? (
+            <div className="flex justify-center py-8">
+              <Loader size={22} className="animate-spin text-blue-500" />
+            </div>
           ) : (
             <div className="space-y-3">
               {isCreating && (
@@ -83,14 +99,14 @@ export default function AdminLoginModal() {
               )}
 
               <div>
-                <label className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1 block">아이디</label>
+                <label className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1 block">이메일</label>
                 <div className="relative">
-                  <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
-                    type="text" value={u}
-                    onChange={e => { setU(e.target.value); setError(''); }}
+                    type="email" value={email}
+                    onChange={e => { setEmail(e.target.value); setError(''); }}
                     onKeyDown={e => e.key === 'Enter' && submit()}
-                    placeholder="관리자 아이디"
+                    placeholder="관리자 이메일"
                     autoFocus
                     className="w-full border border-gray-200 dark:border-gray-600 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
                   />
@@ -105,7 +121,7 @@ export default function AdminLoginModal() {
                     type={showPw ? 'text' : 'password'} value={p}
                     onChange={e => { setP(e.target.value); setError(''); }}
                     onKeyDown={e => e.key === 'Enter' && submit()}
-                    placeholder="비밀번호 (4자 이상)"
+                    placeholder={isCreating ? '비밀번호 (6자 이상)' : '비밀번호'}
                     className="w-full border border-gray-200 dark:border-gray-600 rounded-lg pl-8 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
                   />
                   <button
@@ -141,8 +157,10 @@ export default function AdminLoginModal() {
 
               <button
                 onClick={submit}
-                className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                disabled={loading}
+                className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
               >
+                {loading && <Loader size={14} className="animate-spin" />}
                 {isCreating ? '계정 만들기' : '로그인'}
               </button>
             </div>

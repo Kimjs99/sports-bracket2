@@ -1,7 +1,6 @@
 import { ACTIONS } from './actions';
 import { SCREENS, SPORT_NAME, MAX_HISTORY, MATCH_STATUS } from '../constants';
 import { generateBracket, submitMatchResult } from '../utils/tournament';
-import { saveTournament, loadTournament, deleteTournament, loadAllTournaments, clearAllTournaments } from '../utils/storage';
 
 export const initialState = {
   currentScreen: SCREENS.HOME,
@@ -36,7 +35,7 @@ function buildTournament(meta, teams, seed) {
   };
 }
 
-function makeSummary(t) {
+export function makeSummary(t) {
   const lastRound = t.bracket.rounds[t.bracket.rounds.length - 1];
   const winner = lastRound?.matches[0]?.winner ?? null;
   const allMatches = t.bracket.rounds.flatMap(r => r.matches);
@@ -53,10 +52,6 @@ function makeSummary(t) {
   };
 }
 
-function loadList() {
-  return loadAllTournaments().map(makeSummary);
-}
-
 export function reducer(state, action) {
   switch (action.type) {
 
@@ -67,15 +62,15 @@ export function reducer(state, action) {
       return {
         ...state,
         tournament: null,
-        tournamentList: loadList(),
+        tournamentList: action.payload?.list ?? state.tournamentList,
         currentScreen: SCREENS.HOME,
       };
 
     case ACTIONS.LOAD_TOURNAMENT_LIST:
-      return { ...state, tournamentList: loadList() };
+      return { ...state, tournamentList: action.payload?.list ?? state.tournamentList };
 
     case ACTIONS.SELECT_TOURNAMENT: {
-      const data = loadTournament(action.payload.id);
+      const data = action.payload.data;
       if (!data) return state;
       let screen = action.payload.targetScreen ?? null;
       if (!screen) {
@@ -97,7 +92,6 @@ export function reducer(state, action) {
 
     case ACTIONS.DELETE_TOURNAMENT: {
       const { id } = action.payload;
-      deleteTournament(id);
       return {
         ...state,
         tournament: state.tournament?.meta.id === id ? null : state.tournament,
@@ -126,7 +120,6 @@ export function reducer(state, action) {
     case ACTIONS.GENERATE_BRACKET: {
       const seed = action.payload?.seed ?? Date.now();
       const tournament = buildTournament(state.setupMeta, state.setupTeams, seed);
-      saveTournament(tournament);
       return {
         ...state,
         tournament,
@@ -152,7 +145,6 @@ export function reducer(state, action) {
         bracket: { rounds: bracketData.rounds },
         history: newHistory,
       };
-      saveTournament(updated);
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
       return {
         ...state,
@@ -170,7 +162,6 @@ export function reducer(state, action) {
         matches: r.matches.map(m => m.id === matchId ? { ...m, date, time, venue } : m),
       }));
       const updated = { ...state.tournament, bracket: { rounds } };
-      saveTournament(updated);
       return { ...state, tournament: updated };
     }
 
@@ -179,7 +170,6 @@ export function reducer(state, action) {
       const { matchId, homeScore, awayScore } = action.payload;
       const rounds = submitMatchResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore);
       const updated = { ...state.tournament, bracket: { rounds } };
-      saveTournament(updated);
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
       return { ...state, tournament: updated, tournamentList: newList };
     }
@@ -196,7 +186,6 @@ export function reducer(state, action) {
         ),
       }));
       const updated = { ...state.tournament, bracket: { rounds } };
-      saveTournament(updated);
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
       return { ...state, tournament: updated, tournamentList: newList };
     }
@@ -210,7 +199,6 @@ export function reducer(state, action) {
         createdAt: new Date().toISOString(),
       };
       const updated = { ...state.tournament, notices: [notice, ...state.tournament.notices] };
-      saveTournament(updated);
       return { ...state, tournament: updated };
     }
 
@@ -220,7 +208,6 @@ export function reducer(state, action) {
         ...state.tournament,
         notices: state.tournament.notices.filter(n => n.id !== action.payload.id),
       };
-      saveTournament(updated);
       return { ...state, tournament: updated };
     }
 
@@ -238,13 +225,11 @@ export function reducer(state, action) {
         meta: { ...state.tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
         bracket: { rounds: bracketData.rounds },
       };
-      saveTournament(updated);
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
       return { ...state, tournament: updated, tournamentList: newList };
     }
 
     case ACTIONS.RESET_ALL_TOURNAMENTS:
-      clearAllTournaments();
       return {
         ...initialState,
         tournamentList: [],
