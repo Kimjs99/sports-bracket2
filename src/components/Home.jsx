@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useMemo } from 'react';
 import {
   Plus, Trophy, Lock, Settings, Swords, CalendarDays,
   Users, Layers, Bell, Search, MapPin, Clock, Trash2, HelpCircle,
@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
-import { SCREENS, MATCH_STATUS } from '../constants';
+import { SCREENS, MATCH_STATUS, SPORT_EMOJI } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
 import { loadTournament, saveTournament } from '../utils/storage';
 import { generateBracket } from '../utils/tournament';
@@ -212,12 +212,40 @@ function SchoolScheduleTab({ rounds, teams }) {
   );
 }
 
-// ─── TournamentSelector ────────────────────────────────────────────────────────
+// ─── SportGroupTabs ────────────────────────────────────────────────────────────
 
-function TournamentSelector({ list, currentId, onSelect }) {
+function SportGroupTabs({ groups, activeKey, onSelect }) {
+  if (groups.length <= 1) return null;
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap mb-3">
+      {groups.map(g => {
+        const isActive = g.key === activeKey;
+        return (
+          <button key={g.key} onClick={() => onSelect(g.key)}
+            className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-xl font-semibold border transition-all
+              ${isActive
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+              }`}>
+            <span>{SPORT_EMOJI[g.sport] ?? '🏅'}</span>
+            <span>{g.sport}</span>
+            {g.gender !== '혼성' && <span className="opacity-75">{g.gender}</span>}
+            <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+              {g.items.length}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── TournamentChasu ───────────────────────────────────────────────────────────
+
+function TournamentChasu({ list, currentId, onSelect }) {
   if (list.length <= 1) return null;
   return (
-    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
       {list.map((t, i) => (
         <button key={t.id} onClick={() => onSelect(t.id)}
           className={`text-xs px-2.5 py-1 rounded-full border transition-colors
@@ -225,7 +253,7 @@ function TournamentSelector({ list, currentId, onSelect }) {
               ? 'bg-blue-600 text-white border-blue-600'
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-blue-400'
             }`}>
-          {i === 0 ? '최신' : `${i + 1}차`} ({new Date(t.createdAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })})
+          {list.length - i}차 ({new Date(t.createdAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })})
         </button>
       ))}
     </div>
@@ -257,9 +285,38 @@ function EmptyLevel({ level, isLoggedIn, onNew, onLogin }) {
 // ─── LevelPanel ───────────────────────────────────────────────────────────────
 
 function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requireAdmin, setModalOpen }) {
-  const [currentId, setCurrentId] = useState(() => summaryList[0]?.id ?? null);
+  // ── 종목별 그룹화 ──────────────────────────────────────────────────────────
+  const sportGroups = useMemo(() => {
+    const map = new Map();
+    summaryList.forEach(t => {
+      const key = `${t.sport}__${t.gender ?? '혼성'}`;
+      if (!map.has(key)) map.set(key, { key, sport: t.sport, gender: t.gender ?? '혼성', items: [] });
+      map.get(key).items.push(t);
+    });
+    return [...map.values()];
+  }, [summaryList]);
+
+  const [activeSportKey, setActiveSportKey] = useState(() => sportGroups[0]?.key ?? null);
+
+  const activeGroup = sportGroups.find(g => g.key === activeSportKey) ?? sportGroups[0] ?? null;
+  const filteredList = activeGroup?.items ?? summaryList;
+
+  const [currentId, setCurrentId] = useState(() => filteredList[0]?.id ?? null);
   const [tournament, setTournament] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // 종목 탭 변경 시 currentId 리셋
+  useEffect(() => {
+    const group = sportGroups.find(g => g.key === activeSportKey) ?? sportGroups[0];
+    if (group?.items[0]) setCurrentId(group.items[0].id);
+  }, [activeSportKey]);
+
+  // summaryList 변경 시 activeSportKey 유효성 체크
+  useEffect(() => {
+    if (sportGroups.length > 0 && !sportGroups.find(g => g.key === activeSportKey)) {
+      setActiveSportKey(sportGroups[0].key);
+    }
+  }, [sportGroups]);
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
   const [copied, setCopied] = useState(false);
@@ -370,26 +427,34 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
     { id: 'notices', label: `공지 (${notices.length})`, adminOnly: true },
   ];
 
+  const formatLabel = meta.gameFormat === 'league' ? '리그전' : '토너먼트';
+  const genderLabel = meta.gender && meta.gender !== '혼성' ? `${meta.gender} ` : '';
+
   return (
     <div className="space-y-0">
       {/* Tournament info + admin controls */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="max-w-4xl mx-auto">
+          {/* 종목 그룹 탭 */}
+          <SportGroupTabs groups={sportGroups} activeKey={activeSportKey} onSelect={setActiveSportKey} />
+
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${LEVEL_COLOR[level]?.badge}`}>{level}부</span>
-                <span className="font-bold text-gray-900 dark:text-gray-100">{meta.sport} 토너먼트</span>
+                <span className="font-bold text-gray-900 dark:text-gray-100">
+                  {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport} {formatLabel}
+                </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-1"><Layers size={11} />{meta.bracketSize}강</span>
+                <span className="flex items-center gap-1"><Layers size={11} />{meta.gameFormat === 'league' ? `${meta.bracketSize}팀 리그` : `${meta.bracketSize}강`}</span>
                 <span className="flex items-center gap-1"><Users size={11} />{meta.totalTeams}팀</span>
                 <span className="flex items-center gap-1">
                   <CalendarDays size={11} />
                   {new Date(meta.createdAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
                 </span>
               </div>
-              <TournamentSelector list={summaryList} currentId={currentId} onSelect={setCurrentId} />
+              <TournamentChasu list={filteredList} currentId={currentId} onSelect={setCurrentId} />
             </div>
             <div className="flex flex-col items-end gap-1">
               {winner ? (

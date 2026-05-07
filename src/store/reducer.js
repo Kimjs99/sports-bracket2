@@ -45,6 +45,7 @@ export function makeSummary(t) {
   return {
     id: t.meta.id,
     schoolLevel: t.meta.schoolLevel,
+    gender: t.meta.gender ?? '혼성',
     sport: t.meta.sport,
     totalTeams: t.meta.totalTeams,
     bracketSize: t.meta.bracketSize,
