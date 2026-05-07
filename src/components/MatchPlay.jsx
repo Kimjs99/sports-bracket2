@@ -5,7 +5,7 @@ import { ACTIONS } from '../store/actions';
 import { SCREENS, MATCH_STATUS } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
 
-function MatchResultCard({ match, roundName, dispatch }) {
+function MatchResultCard({ match, roundName, dispatch, allowDraw }) {
   const [home, setHome] = useState(match.homeScore ?? '');
   const [away, setAwayScore] = useState(match.awayScore ?? '');
   const [error, setError] = useState('');
@@ -19,7 +19,7 @@ function MatchResultCard({ match, roundName, dispatch }) {
       setError('올바른 점수를 입력하세요.');
       return;
     }
-    if (hs === as) {
+    if (!allowDraw && hs === as) {
       setError('동점은 허용되지 않습니다. 연장전 결과를 입력해주세요.');
       return;
     }
@@ -241,6 +241,7 @@ export default function MatchPlay() {
               match={match}
               roundName={rounds[activeRound].name}
               dispatch={dispatch}
+              allowDraw={tournament.meta.gameFormat === 'league'}
             />
           ))}
         </div>

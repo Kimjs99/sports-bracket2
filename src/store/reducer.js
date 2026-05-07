@@ -1,13 +1,13 @@
 import { ACTIONS } from './actions';
 import { SCREENS, SPORT_NAME, MAX_HISTORY, MATCH_STATUS } from '../constants';
-import { generateBracket, submitMatchResult } from '../utils/tournament';
+import { generateBracket, generateLeague, submitMatchResult, submitLeagueResult } from '../utils/tournament';
 import { saveTournament, loadTournament, deleteTournament, loadAllTournaments, clearAllTournaments } from '../utils/storage';
 
 export const initialState = {
   currentScreen: SCREENS.HOME,
   tournament: null,
   tournamentList: [],
-  setupMeta: { schoolLevel: '고등', sport: SPORT_NAME },
+  setupMeta: { schoolLevel: '고등', sport: SPORT_NAME, gameFormat: 'tournament' },
   setupTeams: [],
   ui: {
     errorMessage: null,
@@ -16,12 +16,14 @@ export const initialState = {
 };
 
 function buildTournament(meta, teams, seed) {
-  const bracketData = generateBracket(teams, seed);
+  const fmt = meta.gameFormat ?? 'tournament';
+  const bracketData = fmt === 'league' ? generateLeague(teams) : generateBracket(teams, seed);
   return {
     meta: {
       id: `tournament_${seed}`,
       schoolLevel: meta.schoolLevel,
-      sport: meta.sport,
+      sport: meta.sport ?? SPORT_NAME,
+      gameFormat: fmt,
       totalTeams: teams.length,
       bracketSize: bracketData.bracketSize,
       byeCount: bracketData.byeCount,
@@ -145,7 +147,10 @@ export function reducer(state, action) {
         teams: [...state.tournament.teams],
       };
       const newHistory = [...state.tournament.history, oldEntry].slice(-MAX_HISTORY);
-      const bracketData = generateBracket(state.tournament.teams, seed);
+      const isLeagueReshuffle = state.tournament.meta.gameFormat === 'league';
+      const bracketData = isLeagueReshuffle
+        ? generateLeague(state.tournament.teams)
+        : generateBracket(state.tournament.teams, seed);
       const updated = {
         ...state.tournament,
         meta: { ...state.tournament.meta, seed, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount },
@@ -177,7 +182,10 @@ export function reducer(state, action) {
     case ACTIONS.SUBMIT_RESULT: {
       if (!state.tournament) return state;
       const { matchId, homeScore, awayScore } = action.payload;
-      const rounds = submitMatchResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore);
+      const isLeague = state.tournament.meta.gameFormat === 'league';
+      const rounds = isLeague
+        ? submitLeagueResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore)
+        : submitMatchResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore);
       const updated = { ...state.tournament, bracket: { rounds } };
       saveTournament(updated);
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
@@ -255,7 +263,7 @@ export function reducer(state, action) {
       return {
         ...state,
         tournament: null,
-        setupMeta: { schoolLevel: '고등', sport: SPORT_NAME },
+        setupMeta: { schoolLevel: '고등', sport: SPORT_NAME, gameFormat: 'tournament' },
         setupTeams: [],
         currentScreen: SCREENS.HOME,
         ui: { errorMessage: null, reshuffleConfirmOpen: false },

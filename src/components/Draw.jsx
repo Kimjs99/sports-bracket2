@@ -2,9 +2,9 @@ import { useContext, useState, useRef } from 'react';
 import { RefreshCw, AlertTriangle, ChevronRight, ChevronLeft, History, X, Clock, Hash, Lock } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
-import { SCREENS } from '../constants';
+import { SCREENS, SPORT_EMOJI, GAME_FORMATS } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
-import { generateBracket } from '../utils/tournament';
+import { generateBracket, calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
 import DownloadMenu from './ui/DownloadMenu';
 
@@ -246,6 +246,85 @@ function ScheduleInput({ rounds, dispatch }) {
   );
 }
 
+function LeagueStandings({ teams, rounds }) {
+  const rows = calcLeagueStandings(teams, rounds);
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300">
+        순위표
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50">
+              <th className="px-3 py-2 text-left w-6">#</th>
+              <th className="px-3 py-2 text-left">팀명</th>
+              <th className="px-3 py-2 text-center">경기</th>
+              <th className="px-3 py-2 text-center">승</th>
+              <th className="px-3 py-2 text-center">무</th>
+              <th className="px-3 py-2 text-center">패</th>
+              <th className="px-3 py-2 text-center">득점</th>
+              <th className="px-3 py-2 text-center">실점</th>
+              <th className="px-3 py-2 text-center">득실</th>
+              <th className="px-3 py-2 text-center font-bold text-blue-600 dark:text-blue-400">승점</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+            {rows.map((r, i) => (
+              <tr key={r.team} className={i === 0 ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}>
+                <td className="px-3 py-2.5 text-center text-xs text-gray-400">{i + 1}</td>
+                <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-100">
+                  {i === 0 && r.played > 0 && <span className="mr-1">🥇</span>}
+                  {r.team}
+                </td>
+                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.played}</td>
+                <td className="px-3 py-2.5 text-center text-green-600 dark:text-green-400 font-medium">{r.win}</td>
+                <td className="px-3 py-2.5 text-center text-gray-500">{r.draw}</td>
+                <td className="px-3 py-2.5 text-center text-red-500">{r.loss}</td>
+                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.gf}</td>
+                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.ga}</td>
+                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.gf - r.ga > 0 ? `+${r.gf - r.ga}` : r.gf - r.ga}</td>
+                <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.pts}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function LeagueSchedule({ rounds }) {
+  return (
+    <div className="space-y-4">
+      {rounds.map(round => (
+        <div key={round.roundNum} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {round.name}
+          </div>
+          <div className="divide-y divide-gray-50 dark:divide-gray-700">
+            {round.matches.filter(m => !m.isBye).map(m => (
+              <div key={m.id} className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3 text-sm">
+                  <span className={`font-medium ${m.winner === m.home ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>{m.home}</span>
+                  {m.status === 'done'
+                    ? <span className="text-xs font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{m.homeScore} : {m.awayScore}</span>
+                    : <span className="text-xs text-gray-400">vs</span>
+                  }
+                  <span className={`font-medium ${m.winner === m.away ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>{m.away}</span>
+                </div>
+                {m.date && (
+                  <span className="text-xs text-gray-400">{m.date} {m.time} {m.venue && `· ${m.venue}`}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AdminGate({ message, onLogin }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -274,16 +353,25 @@ export default function Draw() {
   if (!tournament) return null;
 
   const { meta, bracket } = tournament;
+  const isLeague = meta.gameFormat === 'league';
   const historyEntries = buildBracketHistory(tournament);
+  const sportEmoji = SPORT_EMOJI[meta.sport] ?? '🏅';
+  const formatLabel = GAME_FORMATS.find(f => f.id === meta.gameFormat)?.label ?? '토너먼트';
 
   function handleReshuffle() {
     dispatch({ type: ACTIONS.RESHUFFLE, payload: { seed: Date.now() } });
   }
 
-  const navItems = [
-    { id: 'bracket', label: '대진표' },
-    { id: 'schedule', label: '일정 입력' },
-  ];
+  const navItems = isLeague
+    ? [
+        { id: 'standings', label: '순위표' },
+        { id: 'bracket',   label: '경기 일정' },
+        { id: 'schedule',  label: '일정 입력' },
+      ]
+    : [
+        { id: 'bracket',  label: '대진표' },
+        { id: 'schedule', label: '일정 입력' },
+      ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -298,20 +386,24 @@ export default function Draw() {
               <ChevronLeft size={15} />
               <span className="hidden sm:inline">목록</span>
             </button>
-            <span className="text-2xl">🏀</span>
+            <span className="text-2xl">{sportEmoji}</span>
             <div>
               <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">
-                {meta.schoolLevel}부 농구 토너먼트
+                {meta.schoolLevel}부 {meta.sport} {formatLabel}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                {meta.totalTeams}팀 · {meta.bracketSize}강 · 부전승 {meta.byeCount}개
+                {meta.totalTeams}팀
+                {isLeague
+                  ? ` · ${bracket.rounds.length}라운드 · 총 ${bracket.rounds.flatMap(r => r.matches).filter(m => !m.isBye).length}경기`
+                  : ` · ${meta.bracketSize}강 · 부전승 ${meta.byeCount}개`
+                }
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <DownloadMenu
               targetRef={bracketRef}
-              filename={`${meta.schoolLevel}부_농구_대진표`}
+              filename={`${meta.schoolLevel}부_${meta.sport}_${formatLabel}`}
             />
             <button
               onClick={() => requireAdmin(() => dispatch({ type: ACTIONS.TOGGLE_RESHUFFLE_CONFIRM, payload: { open: true } }))}
@@ -352,10 +444,17 @@ export default function Draw() {
       {/* Body */}
       <div className="max-w-[1400px] mx-auto p-4 flex flex-col lg:flex-row gap-4 items-start">
         <div className="flex-1 min-w-0">
+          {activeTab === 'standings' && isLeague && (
+            <LeagueStandings teams={tournament.teams} rounds={bracket.rounds} />
+          )}
           {activeTab === 'bracket' && (
-            <div ref={bracketRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <BracketTree rounds={bracket.rounds} />
-            </div>
+            isLeague
+              ? <LeagueSchedule rounds={bracket.rounds} />
+              : (
+                <div ref={bracketRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+                  <BracketTree rounds={bracket.rounds} />
+                </div>
+              )
           )}
           {activeTab === 'schedule' && (
             isLoggedIn
