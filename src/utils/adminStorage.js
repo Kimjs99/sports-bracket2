@@ -1,27 +1,31 @@
-import { supabase } from '../lib/supabase';
+const CRED_KEY = 'tournament_admin_v1';
+const SESSION_KEY = 'tournament_admin_session_v1';
 
-export async function hasAdmin() {
-  const { data } = await supabase
-    .from('app_config')
-    .select('value')
-    .eq('key', 'admin_created')
-    .single();
-  return !!data;
+export function hasAdmin() {
+  try { return !!JSON.parse(localStorage.getItem(CRED_KEY)); }
+  catch { return false; }
 }
 
-export async function saveAdmin(email, password) {
-  const { error } = await supabase.auth.signUp({ email, password });
-  if (error) throw error;
-  await supabase
-    .from('app_config')
-    .upsert({ key: 'admin_created', value: 'true' });
+export function saveAdmin(username, password) {
+  localStorage.setItem(CRED_KEY, JSON.stringify({ username, password }));
 }
 
-export async function verifyAdmin(email, password) {
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  return !error;
+export function verifyAdmin(username, password) {
+  try {
+    const a = JSON.parse(localStorage.getItem(CRED_KEY));
+    return !!(a && a.username === username && a.password === password);
+  } catch { return false; }
 }
 
-export async function signOutAdmin() {
-  await supabase.auth.signOut();
+export function getSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); }
+  catch { return null; }
+}
+
+export function saveSession(username) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ username }));
+}
+
+export function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
 }

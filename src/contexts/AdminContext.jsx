@@ -1,57 +1,36 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { saveAdmin, verifyAdmin, signOutAdmin } from '../utils/adminStorage';
-import { supabase } from '../lib/supabase';
+import { createContext, useContext, useState, useCallback } from 'react';
+import { hasAdmin, saveAdmin, verifyAdmin, getSession, saveSession, clearSession } from '../utils/adminStorage';
 
 const Ctx = createContext(null);
 
 export function AdminProvider({ children }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!getSession());
+  const [username, setUsername] = useState(() => getSession()?.username ?? null);
   const [modalOpen, setModalOpen] = useState(false);
   const [pending, setPending] = useState(null);
 
-  // 페이지 로드 시 기존 세션 복원
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setIsLoggedIn(true);
-        setUsername(session.user.email);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user) {
-        setIsLoggedIn(true);
-        setUsername(session.user.email);
-      } else {
-        setIsLoggedIn(false);
-        setUsername(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const login = useCallback(async (email, password) => {
-    const ok = await verifyAdmin(email, password);
+  const login = useCallback((uname, password) => {
+    const ok = verifyAdmin(uname, password);
     if (ok) {
+      saveSession(uname);
       setIsLoggedIn(true);
-      setUsername(email);
+      setUsername(uname);
     }
     return ok;
   }, []);
 
-  const logout = useCallback(async () => {
-    await signOutAdmin();
+  const logout = useCallback(() => {
+    clearSession();
     setIsLoggedIn(false);
     setUsername(null);
   }, []);
 
-  const createAccount = useCallback(async (email, password) => {
+  const createAccount = useCallback((uname, password) => {
     try {
-      await saveAdmin(email, password);
+      saveAdmin(uname, password);
+      saveSession(uname);
       setIsLoggedIn(true);
-      setUsername(email);
+      setUsername(uname);
       return true;
     } catch {
       return false;
@@ -78,7 +57,7 @@ export function AdminProvider({ children }) {
   return (
     <Ctx.Provider value={{
       isLoggedIn, username,
-      login, logout, createAccount,
+      login, logout, createAccount, hasAdmin,
       requireAdmin, openModal,
       modalOpen, setModalOpen, onSuccess,
     }}>
