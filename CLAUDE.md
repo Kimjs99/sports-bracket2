@@ -21,7 +21,7 @@ No test suite exists in this project.
 
 Two separate React contexts:
 
-1. **`AppContext`** (`src/App.jsx`) — wraps `useReducer(reducer, initialState)`. All tournament data, screen navigation, and UI state live here. Consumed via `useContext(AppContext)` → `{ state, dispatch }`.
+1. **`AppContext`** (`src/App.jsx`) — wraps `useReducer(reducer, initialState)`. All tournament data, screen navigation, and UI state live here. Consumed via `useContext(AppContext)` → `{ state, dispatch, importedLevel }`. `importedLevel` is set transiently (4 s) when a share-link tournament is imported on mount.
 
 2. **`AdminContext`** (`src/contexts/AdminContext.jsx`) — auth-only state (isLoggedIn, username, modal open/close, pending action queue). Consumed via `useAdmin()` hook. Sits outside `AppContext` and wraps the whole app.
 
@@ -47,7 +47,7 @@ As a consequence, notice add/delete operations in `Home.jsx` are handled locally
 
 ### Admin auth (`src/utils/adminStorage.js`)
 
-Credentials stored in `localStorage` key `tournament_admin_v1` as `{ username, password }`. Single admin account only.
+Credentials stored in `localStorage` key `tournament_admin_v1` as `{ username, password }`. Single admin account only. `AdminContext` `isLoggedIn` state is **in-memory** — credentials persist across page reloads but the session does not (user must log in again after refresh).
 
 **`requireAdmin(action)`** pattern: if already logged in → executes `action()` immediately; if not → stores it as `pending`, opens modal → `onSuccess()` closes modal and runs the stored action.
 
@@ -79,7 +79,11 @@ Tailwind v4 class-based dark mode via `@custom-variant dark (&:where(.dark, .dar
 
 ### Bracket download (`src/components/ui/DownloadMenu.jsx`)
 
-html2canvas + jsPDF are **dynamically imported** (lazy-loaded) on first use. `captureElement(el)` uses `scale: 2` for retina quality and reads the current background color for dark mode support.
+`dom-to-image-more` + jsPDF are **dynamically imported** (lazy-loaded) on first use. `captureBlob(element, type, quality)` uses `scale: 2` for retina quality and hardcodes `bgcolor` per theme (`#1e293b` dark / `#ffffff` light). Targets `.bracket-container` inside the ref, falling back to the ref itself.
+
+### Share links (`src/utils/shareUtils.js`)
+
+`buildShareUrl(tournament)` LZString-compresses the full tournament object into a `?t=` query param. On mount, `App.jsx` calls `readShareParam()` — if found, it saves the decoded tournament via `saveTournament` and removes the param from the URL with `clearShareParam()`, then shows a banner via `importedLevel` state for 4 s.
 
 ### Key files at a glance
 
