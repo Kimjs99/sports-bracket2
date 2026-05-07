@@ -2,24 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v0.2.0] - 2026-05-01
+## [v0.2.0] - 2026-04-28
 
 ### ✨ Features
-- localStorage → Supabase 마이그레이션: 기기 간 계정·대진 데이터 동기화 (`339e693`)
-- 관리자 전용 대진 초기화·전체 초기화 기능 추가 (`52de497`)
-- 공유 링크로 다른 기기에서 대진 확인 가능하도록 구현 (`3132ab1`)
 - 홈 화면에 관리자/게스트 사용 가이드 모달 추가 (`cff52f2`)
+- 공유 링크로 다른 기기에서 대진표 확인 가능하도록 구현 (LZString URL 압축) (`3132ab1`)
+- 관리자 전용 대진 초기화·전체 초기화 기능 추가 (`52de497`)
 
 ### 🐛 Bug Fixes
-- dom-to-image-more 패키지 의존성 누락으로 인한 GitHub Actions 빌드 실패 수정 (`d5ef90b`)
-- 브라켓 다운로드 라이브러리를 html2canvas → dom-to-image-more로 교체하여 브라우저 호환성 개선 (`0374856`, `8334f56`)
+- 내려받기 기능 브라우저 호환성 개선 (`8334f56`)
+- 브라켓 다운로드 라이브러리 html2canvas → dom-to-image-more로 교체 (`0374856`)
 
 ### 📝 Documentation
-- CLAUDE.md — Supabase 마이그레이션 반영하여 전면 업데이트 (`07d99d7`)
 - 관리자·게스트 사용 가이드 README 작성 (`07ec872`)
 
 ### 🔧 Chores
-- GitHub Pages 배포 워크플로우(deploy.yml) 설정 추가 (`1becf76`)
+- GitHub Pages 배포 설정 추가 (`.github/workflows/deploy.yml`) (`1becf76`)
 
 ---
 
@@ -40,7 +38,7 @@ All notable changes to this project will be documented in this file.
 - 참가 팀 등록 및 수정 (중등부 / 고등부 구분)
 - 토너먼트 브라켓 자동 생성 (2의 거듭제곱 브라켓, 부전승 자동 배정)
 - 대진 재구성(리셔플) 기능
-- 대진표 다운로드: PNG / JPG / PDF 형식 지원 (html2canvas + jsPDF)
+- 대진표 다운로드: PNG / JPG / PDF 형식 지원 (dom-to-image-more + jsPDF)
 - 경기 일정 입력 (날짜 / 시간 / 장소)
 - 브라켓 카드에 일정 정보 표시
 
@@ -93,7 +91,7 @@ All notable changes to this project will be documented in this file.
 - Tailwind CSS v4 (`@custom-variant dark` 클래스 기반)
 - `useReducer` + Context API (전역 앱 상태 + 관리자 인증 분리)
 - `localStorage` 다중 대회 저장 구조 (`tournament_ids_v2`, `tournament_data_{id}`)
-- html2canvas + jsPDF (브라켓 이미지/PDF 내보내기, 동적 임포트 레이지 로딩)
+- dom-to-image-more + jsPDF (브라켓 이미지/PDF 내보내기, 동적 임포트 레이지 로딩)
 - lucide-react 아이콘
 
 ---

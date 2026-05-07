@@ -122,6 +122,82 @@ export function generateBracket(teams, seed) {
   return { rounds, bracketSize, byeCount };
 }
 
+// ── League (round-robin) ──────────────────────────────────────────────────────
+
+export function generateLeague(teams) {
+  const ts = [...teams];
+  if (ts.length % 2 !== 0) ts.push(null); // null = bye dummy
+  const size = ts.length;
+  const numRounds = size - 1;
+  const rounds = [];
+
+  for (let r = 0; r < numRounds; r++) {
+    const matches = [];
+    for (let m = 0; m < size / 2; m++) {
+      const home = ts[m];
+      const away = ts[size - 1 - m];
+      const isBye = home === null || away === null;
+      matches.push({
+        id: `r${r + 1}m${m + 1}`,
+        home: isBye ? (home ?? away) : home,
+        away: isBye ? 'BYE' : away,
+        homeScore: null,
+        awayScore: null,
+        winner: isBye ? (home ?? away) : null,
+        isBye,
+        date: null, time: null, venue: null,
+        status: isBye ? MATCH_STATUS.BYE : MATCH_STATUS.SCHEDULED,
+      });
+    }
+    rounds.push({ roundNum: r + 1, name: `${r + 1}라운드`, matches });
+    // Rotate ts[1..size-1] clockwise: last element moves to index 1
+    const last = ts.splice(size - 1, 1)[0];
+    ts.splice(1, 0, last);
+  }
+
+  return { rounds, bracketSize: teams.length, byeCount: teams.length % 2 !== 0 ? 1 : 0 };
+}
+
+export function submitLeagueResult(bracketRounds, matchId, homeScore, awayScore) {
+  const rounds = bracketRounds.map(r => ({ ...r, matches: r.matches.map(m => ({ ...m })) }));
+  for (const round of rounds) {
+    const match = round.matches.find(m => m.id === matchId);
+    if (match) {
+      match.homeScore = homeScore;
+      match.awayScore = awayScore;
+      match.winner = homeScore !== awayScore ? (homeScore > awayScore ? match.home : match.away) : null;
+      match.status = MATCH_STATUS.DONE;
+      match.completedAt = new Date().toISOString();
+      break;
+    }
+  }
+  return rounds;
+}
+
+export function calcLeagueStandings(teams, rounds) {
+  const stats = Object.fromEntries(
+    teams.map(t => [t, { team: t, played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0, pts: 0 }])
+  );
+  for (const round of rounds) {
+    for (const m of round.matches) {
+      if (m.isBye || m.status !== MATCH_STATUS.DONE) continue;
+      const h = stats[m.home]; const a = stats[m.away];
+      if (!h || !a) continue;
+      h.played++; a.played++;
+      h.gf += m.homeScore ?? 0; h.ga += m.awayScore ?? 0;
+      a.gf += m.awayScore ?? 0; a.ga += m.homeScore ?? 0;
+      if (m.homeScore > m.awayScore)      { h.win++; h.pts += 3; a.loss++; }
+      else if (m.homeScore < m.awayScore) { a.win++; a.pts += 3; h.loss++; }
+      else                                { h.draw++; h.pts += 1; a.draw++; a.pts += 1; }
+    }
+  }
+  return Object.values(stats).sort(
+    (a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf
+  );
+}
+
+// ── Tournament (single elimination) ──────────────────────────────────────────
+
 export function submitMatchResult(bracketRounds, matchId, homeScore, awayScore) {
   const rounds = bracketRounds.map(r => ({
     ...r,

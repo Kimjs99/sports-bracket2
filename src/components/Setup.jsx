@@ -1,15 +1,43 @@
-import { useState, useContext } from 'react';
-import { Plus, Trash2, Shuffle, AlertCircle, Lock, ChevronLeft } from 'lucide-react';
+import { useState, useContext, useRef } from 'react';
+import { Plus, Trash2, Shuffle, AlertCircle, Lock, ChevronLeft, Upload } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { useAdmin } from '../contexts/AdminContext';
-import { SCHOOL_LEVELS, MIN_TEAMS, MAX_TEAMS, MAX_TEAM_NAME_LENGTH } from '../constants';
+import { SCHOOL_LEVELS, SPORTS, SPORT_EMOJI, GAME_FORMATS, MIN_TEAMS, MAX_TEAMS, MAX_TEAM_NAME_LENGTH } from '../constants';
+
+function parseCSVText(text) {
+  return text
+    .split(/\r?\n/)
+    .map(line => line.split(',')[0].replace(/^["'\s]+|["'\s]+$/g, ''))
+    .filter(name => name.length > 0);
+}
+
+async function parseFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv' || ext === 'txt') {
+    const text = await file.text();
+    return parseCSVText(text);
+  }
+  if (ext === 'xlsx' || ext === 'xls') {
+    const { read, utils } = await import('xlsx');
+    const buffer = await file.arrayBuffer();
+    const wb = read(buffer);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = utils.sheet_to_json(ws, { header: 1 });
+    return rows
+      .map(row => String(row[0] ?? '').trim())
+      .filter(name => name.length > 0);
+  }
+  return null;
+}
 
 export default function Setup() {
   const { state, dispatch } = useContext(AppContext);
   const { setupMeta, setupTeams, ui } = state;
   const { requireAdmin, isLoggedIn } = useAdmin();
   const [newTeamName, setNewTeamName] = useState('');
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = useRef(null);
 
   function addTeam() {
     const name = newTeamName.trim().slice(0, MAX_TEAM_NAME_LENGTH);
@@ -56,6 +84,39 @@ export default function Setup() {
     requireAdmin(() => dispatch({ type: ACTIONS.GENERATE_BRACKET, payload: { seed: Date.now() } }));
   }
 
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    let names;
+    try {
+      names = await parseFile(file);
+    } catch {
+      dispatch({ type: ACTIONS.SET_UI_ERROR, payload: { message: '파일을 읽을 수 없습니다.' } });
+      return;
+    }
+
+    if (!names || names.length === 0) {
+      dispatch({ type: ACTIONS.SET_UI_ERROR, payload: { message: '팀명을 찾을 수 없습니다. 첫 번째 열에 팀명이 있는지 확인해주세요.' } });
+      return;
+    }
+
+    let added = 0, skipped = 0;
+    const current = [...setupTeams];
+    for (const raw of names) {
+      const name = raw.slice(0, MAX_TEAM_NAME_LENGTH);
+      if (!name) { skipped++; continue; }
+      if (current.includes(name)) { skipped++; continue; }
+      if (current.length >= MAX_TEAMS) { skipped += names.length - added - skipped; break; }
+      current.push(name);
+      dispatch({ type: ACTIONS.ADD_TEAM, payload: { name } });
+      added++;
+    }
+    setImportResult({ added, skipped });
+    setTimeout(() => setImportResult(null), 3000);
+  }
+
   const canGenerate = setupTeams.length >= MIN_TEAMS;
 
   return (
@@ -76,14 +137,14 @@ export default function Setup() {
         </div>
 
         {/* School Level */}
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">학교급 선택</label>
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">학교급</label>
           <div className="flex gap-3">
             {SCHOOL_LEVELS.map(level => (
               <button
                 key={level}
                 onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { schoolLevel: level } })}
-                className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all
+                className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all
                   ${setupMeta.schoolLevel === level
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -92,6 +153,56 @@ export default function Setup() {
                 {level}부
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Sport */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">종목</label>
+          <div className="flex flex-wrap gap-2">
+            {SPORTS.map(sport => (
+              <button
+                key={sport}
+                onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { sport } })}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                  ${setupMeta.sport === sport
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                {SPORT_EMOJI[sport]} {sport}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Game Format */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">경기 방식</label>
+          <div className="grid grid-cols-3 gap-2">
+            {GAME_FORMATS.map(fmt => {
+              const isLink = fmt.id === 'link';
+              const isSelected = setupMeta.gameFormat === fmt.id;
+              return (
+                <button
+                  key={fmt.id}
+                  disabled={isLink}
+                  onClick={() => !isLink && dispatch({ type: ACTIONS.SET_META, payload: { gameFormat: fmt.id } })}
+                  className={`relative p-3 rounded-xl border-2 text-left transition-all
+                    ${isLink ? 'opacity-40 cursor-not-allowed border-gray-200 dark:border-gray-700' :
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                    }`}
+                >
+                  <div className="font-semibold text-sm text-gray-800 dark:text-gray-100">{fmt.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{fmt.desc}</div>
+                  {isSelected && !isLink && (
+                    <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -118,7 +229,28 @@ export default function Setup() {
             >
               <Plus size={18} />
             </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title="CSV / Excel 파일로 일괄 추가"
+              className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Upload size={18} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls,.txt"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
           </div>
+
+          {importResult && (
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm mb-3 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg">
+              <Upload size={14} />
+              {importResult.added}팀 추가됨{importResult.skipped > 0 ? ` (${importResult.skipped}건 중복·초과로 건너뜀)` : ''}
+            </div>
+          )}
 
           {ui.errorMessage && (
             <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm mb-3 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">

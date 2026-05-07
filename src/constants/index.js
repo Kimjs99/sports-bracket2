@@ -1,6 +1,19 @@
 export const SCHOOL_LEVELS = ['중등', '고등'];
-export const SPORT_NAME = '농구';
+export const SPORT_NAME = '농구'; // legacy
 export const STORAGE_KEY = 'school_tournament_data';
+
+export const SPORTS = ['농구', '축구', '배구', '핸드볼', '풋살', '기타'];
+
+export const SPORT_EMOJI = {
+  '농구': '🏀', '축구': '⚽', '배구': '🏐',
+  '핸드볼': '🤾', '풋살': '⚽', '기타': '🏅',
+};
+
+export const GAME_FORMATS = [
+  { id: 'tournament', label: '토너먼트', desc: '단판 승부 · 진 팀 탈락' },
+  { id: 'league',     label: '리그전',   desc: '전팀 맞대결 · 승점 누적' },
+  { id: 'link',       label: '링크전',   desc: '조별리그 후 토너먼트 (준비 중)' },
+];
 
 export const MATCH_STATUS = {
   SCHEDULED: 'scheduled',
