@@ -94,7 +94,7 @@ function AppInner({ theme, setTheme }) {
       {screen === SCREENS.DASHBOARD && <Dashboard />}
       {modalOpen && <AdminLoginModal />}
       <footer className="text-center text-[11px] text-gray-400 dark:text-gray-600 py-4 pb-6 select-none">
-        © 2026 학스클 대진표 &nbsp;·&nbsp; v0.3.0
+        © 2026 kimjs · 학교스포츠클럽 대진 관리 시스템. Designed for school sports.
       </footer>
     </AppContext.Provider>
   );
