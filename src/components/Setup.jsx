@@ -171,20 +171,24 @@ export default function Setup() {
         {/* Sport */}
         <div className="mb-5">
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">종목</label>
-          <div className="flex flex-wrap gap-2">
-            {SPORTS.map(sport => (
-              <button
-                key={sport}
-                onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { sport } })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                  ${setupMeta.sport === sport
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-              >
-                {SPORT_EMOJI[sport]} {sport}
-              </button>
-            ))}
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none select-none">
+              {SPORT_EMOJI[setupMeta.sport] ?? '🏅'}
+            </span>
+            <select
+              value={setupMeta.sport}
+              onChange={e => dispatch({ type: ACTIONS.SET_META, payload: { sport: e.target.value } })}
+              className="w-full appearance-none border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-8 py-2.5 text-sm font-medium bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+            >
+              {SPORTS.map(sport => (
+                <option key={sport} value={sport}>
+                  {SPORT_EMOJI[sport]} {sport}
+                </option>
+              ))}
+            </select>
+            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </div>
         </div>
 
