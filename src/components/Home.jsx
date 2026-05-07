@@ -735,8 +735,8 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <span className="text-xl">🏀</span>
             <div>
-              <h1 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">학교스포츠클럽 농구</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">토너먼트 대진 관리</p>
+              <h1 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">학교스포츠클럽 축제</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">대진관리</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
