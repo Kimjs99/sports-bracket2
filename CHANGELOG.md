@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.0] - 2026-05-07
+
+### ✨ Features
+- 리그전 조별편성+토너먼트 기능 추가: 7팀 이상 시 자동 조편성, 조별 리그 완료 후 토너먼트 대진 자동 생성 (`353f0be`)
+- 종목 대시보드에 조별 순위표·경기 결과 공개 표시 (GroupDashboardView) (`8c35727`)
+- 학교급별 종목 현황 카드 대시보드 추가 — 진행률·우승자·포맷 한눈에 확인, 종목 목록 뒤로가기 (`ccd58e7`)
+- 전체 초기화 2단계 확인 다이얼로그 추가 (실수 방지) (`ccd58e7`)
+- 초등부 지원 및 성별(남성/여성/혼성) 구분 추가 (`f3c2703`)
+- 팀 목록 CSV/Excel 템플릿 다운로드 버튼 추가 (`86412fd`)
+- 종목 선택, 경기방식(토너먼트/리그전) 선택, CSV·Excel 일괄 업로드 기능 추가 (`ed0b776`)
+- 종목 목록 22개로 확장 (보치아, 슐런 등 특수 종목 포함) (`7304fee`)
+
+### 🐛 Bug Fixes
+- 기존 대진 불러올 때 gameFormat 복원 오류 및 key 중복 버그 수정 (`c20c3f8`)
+- Supabase Auth 연동으로 RLS 기반 쓰기 권한 적용 (`b3d7b07`)
+- localStorage 우선 저장 + Supabase 보조 동기화 방식으로 안정화 (`9c4bbde`)
+- 관리자 인증 localStorage 방식 롤백 및 세션 유지 복구 (`6450080`)
+
+### ♻️ Refactoring
+- 종목 선택 UI를 pill 버튼 → 드롭다운으로 변경 (`2a20001`)
+
+### 📝 Documentation
+- CLAUDE.md 전면 업데이트 — 현재 아키텍처 반영 (`4fa22c3`)
+
+### 🔧 Chores
+- 앱 타이틀 '학교스포츠클럽 축제 대진관리'로 변경 (`cefc5f8`)
+- 푸터 저작권 표기 kimjs로 업데이트 (`ede38b2`)
+
+---
+
 ## [v0.2.0] - 2026-04-28
 
 ### ✨ Features
