@@ -1,12 +1,12 @@
 import { ACTIONS } from './actions';
-import { SCREENS, SPORT_NAME, MAX_HISTORY, MATCH_STATUS } from '../constants';
+import { SCREENS, SPORT_NAME, MAX_HISTORY, MATCH_STATUS, GENDER_TYPES } from '../constants';
 import { generateBracket, generateLeague, submitMatchResult, submitLeagueResult } from '../utils/tournament';
 
 export const initialState = {
   currentScreen: SCREENS.HOME,
   tournament: null,
   tournamentList: [],
-  setupMeta: { schoolLevel: '고등', sport: SPORT_NAME, gameFormat: 'tournament' },
+  setupMeta: { schoolLevel: '고등', gender: GENDER_TYPES[2], sport: SPORT_NAME, gameFormat: 'tournament' },
   setupTeams: [],
   ui: {
     errorMessage: null,
@@ -21,6 +21,7 @@ function buildTournament(meta, teams, seed) {
     meta: {
       id: `tournament_${seed}`,
       schoolLevel: meta.schoolLevel,
+      gender: meta.gender ?? GENDER_TYPES[2],
       sport: meta.sport ?? SPORT_NAME,
       gameFormat: fmt,
       totalTeams: teams.length,
@@ -86,7 +87,7 @@ export function reducer(state, action) {
       return {
         ...state,
         tournament: data,
-        setupMeta: { schoolLevel: data.meta.schoolLevel, sport: data.meta.sport },
+        setupMeta: { schoolLevel: data.meta.schoolLevel, gender: data.meta.gender ?? GENDER_TYPES[2], sport: data.meta.sport },
         setupTeams: [...data.teams],
         currentScreen: screen,
       };
@@ -248,7 +249,7 @@ export function reducer(state, action) {
       return {
         ...state,
         tournament: null,
-        setupMeta: { schoolLevel: '고등', sport: SPORT_NAME, gameFormat: 'tournament' },
+        setupMeta: { schoolLevel: '고등', gender: GENDER_TYPES[2], sport: SPORT_NAME, gameFormat: 'tournament' },
         setupTeams: [],
         currentScreen: SCREENS.HOME,
         ui: { errorMessage: null, reshuffleConfirmOpen: false },

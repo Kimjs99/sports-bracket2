@@ -15,10 +15,11 @@ import HelpModal from './ui/HelpModal';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { buildShareUrl } from '../utils/shareUtils';
 
-const LEVELS = ['고등', '중등'];
+const LEVELS = ['초등', '중등', '고등'];
 const LEVEL_COLOR = {
-  '고등': { badge: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300', activeTab: 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400', dot: 'bg-blue-500' },
+  '초등': { badge: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300', activeTab: 'border-orange-500 text-orange-600 dark:text-orange-400 dark:border-orange-400', dot: 'bg-orange-400' },
   '중등': { badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300', activeTab: 'border-green-600 text-green-600 dark:text-green-400 dark:border-green-400', dot: 'bg-green-500' },
+  '고등': { badge: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300', activeTab: 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400', dot: 'bg-blue-500' },
 };
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -718,10 +719,8 @@ export default function Home() {
       return;
     }
     if (tournamentList.length > 0) {
-      const hasGo = tournamentList.some(t => t.schoolLevel === '고등');
-      if (!hasGo && tournamentList.some(t => t.schoolLevel === '중등')) {
-        setActiveLevel('중등');
-      }
+      const found = ['고등', '중등', '초등'].find(lv => tournamentList.some(t => t.schoolLevel === lv));
+      if (found) setActiveLevel(found);
     }
   }, [importedLevel]);
 

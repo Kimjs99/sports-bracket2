@@ -3,7 +3,7 @@ import { Plus, Trash2, Shuffle, AlertCircle, Lock, ChevronLeft, Upload, Download
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { useAdmin } from '../contexts/AdminContext';
-import { SCHOOL_LEVELS, SPORTS, SPORT_EMOJI, GAME_FORMATS, MIN_TEAMS, MAX_TEAMS, MAX_TEAM_NAME_LENGTH } from '../constants';
+import { SCHOOL_LEVELS, GENDER_TYPES, SPORTS, SPORT_EMOJI, GAME_FORMATS, MIN_TEAMS, MAX_TEAMS, MAX_TEAM_NAME_LENGTH } from '../constants';
 
 function parseCSVText(text) {
   return text
@@ -148,10 +148,10 @@ export default function Setup() {
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">참가팀을 입력하고 대진을 생성하세요</p>
         </div>
 
-        {/* School Level */}
+        {/* School Level + Gender */}
         <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">학교급</label>
-          <div className="flex gap-3">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">학교급 · 종별</label>
+          <div className="flex gap-2 mb-2">
             {SCHOOL_LEVELS.map(level => (
               <button
                 key={level}
@@ -163,6 +163,23 @@ export default function Setup() {
                   }`}
               >
                 {level}부
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {GENDER_TYPES.map(gender => (
+              <button
+                key={gender}
+                onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { gender } })}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all
+                  ${setupMeta.gender === gender
+                    ? gender === '남성' ? 'bg-sky-500 text-white shadow-sm'
+                      : gender === '여성' ? 'bg-pink-500 text-white shadow-sm'
+                      : 'bg-violet-500 text-white shadow-sm'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                {gender}
               </button>
             ))}
           </div>

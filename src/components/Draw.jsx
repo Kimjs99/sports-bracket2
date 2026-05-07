@@ -389,7 +389,7 @@ export default function Draw() {
             <span className="text-2xl">{sportEmoji}</span>
             <div>
               <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">
-                {meta.schoolLevel}부 {meta.sport} {formatLabel}
+                {meta.schoolLevel}부 {meta.gender ? `${meta.gender} ` : ''}{meta.sport} {formatLabel}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 {meta.totalTeams}팀
@@ -403,7 +403,7 @@ export default function Draw() {
           <div className="flex items-center gap-2">
             <DownloadMenu
               targetRef={bracketRef}
-              filename={`${meta.schoolLevel}부_${meta.sport}_${formatLabel}`}
+              filename={`${meta.schoolLevel}부_${meta.gender ?? ''}${meta.gender ? '_' : ''}${meta.sport}_${formatLabel}`}
             />
             <button
               onClick={() => requireAdmin(() => dispatch({ type: ACTIONS.TOGGLE_RESHUFFLE_CONFIRM, payload: { open: true } }))}

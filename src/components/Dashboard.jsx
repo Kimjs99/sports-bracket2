@@ -256,7 +256,7 @@ export default function Dashboard() {
             </button>
           )}
           <div className="text-center">
-            <div className="font-bold text-base">🏀 {meta.schoolLevel}부 농구 대회</div>
+            <div className="font-bold text-base">🏅 {meta.schoolLevel}부 {meta.gender ? `${meta.gender} ` : ''}{meta.sport} 대회</div>
             <div className="text-xs text-blue-200">{completedCount}/{totalNonBye} 경기 완료</div>
           </div>
           <button onClick={() => dispatch({ type: ACTIONS.BACK_TO_HOME })} className="text-xs text-blue-200 hover:text-white flex items-center gap-1">

@@ -1,4 +1,5 @@
-export const SCHOOL_LEVELS = ['중등', '고등'];
+export const SCHOOL_LEVELS = ['초등', '중등', '고등'];
+export const GENDER_TYPES = ['남성', '여성', '혼성'];
 export const SPORT_NAME = '농구'; // legacy
 export const STORAGE_KEY = 'school_tournament_data';
 
