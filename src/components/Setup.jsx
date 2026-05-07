@@ -1,5 +1,5 @@
 import { useState, useContext, useRef } from 'react';
-import { Plus, Trash2, Shuffle, AlertCircle, Lock, ChevronLeft, Upload } from 'lucide-react';
+import { Plus, Trash2, Shuffle, AlertCircle, Lock, ChevronLeft, Upload, Download } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { useAdmin } from '../contexts/AdminContext';
@@ -82,6 +82,18 @@ export default function Setup() {
       return;
     }
     requireAdmin(() => dispatch({ type: ACTIONS.GENERATE_BRACKET, payload: { seed: Date.now() } }));
+  }
+
+  function downloadTemplate() {
+    const rows = ['팀명', '홍익중학교', '세종고등학교', '한강초등학교', '대한고등학교'];
+    const csv = '﻿' + rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '참가팀_양식.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function handleFileUpload(e) {
@@ -213,7 +225,7 @@ export default function Setup() {
             <span className="ml-2 text-blue-600 dark:text-blue-400 font-bold">{setupTeams.length}팀</span>
           </label>
 
-          <div className="flex gap-2 mb-3">
+          <div className="flex gap-2 mb-2">
             <input
               type="text"
               value={newTeamName}
@@ -229,12 +241,20 @@ export default function Setup() {
             >
               <Plus size={18} />
             </button>
+          </div>
+
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={downloadTemplate}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Download size={13} /> 양식 내려받기
+            </button>
             <button
               onClick={() => fileInputRef.current?.click()}
-              title="CSV / Excel 파일로 일괄 추가"
-              className="border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
             >
-              <Upload size={18} />
+              <Upload size={13} /> 파일 올리기
             </button>
             <input
               ref={fileInputRef}
