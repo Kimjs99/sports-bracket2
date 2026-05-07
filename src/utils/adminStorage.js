@@ -1,31 +1,47 @@
-const CRED_KEY = 'tournament_admin_v1';
-const SESSION_KEY = 'tournament_admin_session_v1';
+import { supabase } from '../lib/supabase';
+
+// Single admin account — uses a fixed synthetic email internally.
+// Username is a display label stored in Supabase user_metadata.
+const ADMIN_EMAIL = 'admin@school-bracket.app';
+const ADMIN_CREATED_KEY = 'tournament_admin_created_v1'; // value = username string
 
 export function hasAdmin() {
-  try { return !!JSON.parse(localStorage.getItem(CRED_KEY)); }
-  catch { return false; }
+  return !!localStorage.getItem(ADMIN_CREATED_KEY);
 }
 
-export function saveAdmin(username, password) {
-  localStorage.setItem(CRED_KEY, JSON.stringify({ username, password }));
+export async function saveAdmin(username, password) {
+  const { data, error } = await supabase.auth.signUp({
+    email: ADMIN_EMAIL,
+    password,
+    options: { data: { username } },
+  });
+  if (error) throw error;
+  // session is null when account already exists (email confirm disabled + duplicate)
+  if (!data.session) throw new Error('ALREADY_EXISTS');
+  localStorage.setItem(ADMIN_CREATED_KEY, username);
 }
 
-export function verifyAdmin(username, password) {
-  try {
-    const a = JSON.parse(localStorage.getItem(CRED_KEY));
-    return !!(a && a.username === username && a.password === password);
-  } catch { return false; }
+export async function verifyAdmin(password) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: ADMIN_EMAIL,
+    password,
+  });
+  if (error || !data.session) return false;
+  const uname = data.user?.user_metadata?.username
+    ?? localStorage.getItem(ADMIN_CREATED_KEY)
+    ?? 'admin';
+  localStorage.setItem(ADMIN_CREATED_KEY, uname);
+  return true;
 }
 
-export function getSession() {
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); }
-  catch { return null; }
+export async function signOutAdmin() {
+  await supabase.auth.signOut();
+  // keep ADMIN_CREATED_KEY so hasAdmin() stays true on same device
 }
 
-export function saveSession(username) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ username }));
-}
-
-export function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
+export function subscribeAuth(callback) {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    callback(session);
+  });
+  return subscription;
 }

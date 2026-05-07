@@ -1,40 +1,54 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { hasAdmin, saveAdmin, verifyAdmin, getSession, saveSession, clearSession } from '../utils/adminStorage';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { hasAdmin, saveAdmin, verifyAdmin, signOutAdmin, subscribeAuth } from '../utils/adminStorage';
 
 const Ctx = createContext(null);
 
+const ADMIN_CREATED_KEY = 'tournament_admin_created_v1';
+
 export function AdminProvider({ children }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!getSession());
-  const [username, setUsername] = useState(() => getSession()?.username ?? null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [pending, setPending] = useState(null);
 
-  const login = useCallback((uname, password) => {
-    const ok = verifyAdmin(uname, password);
+  // Restore session from Supabase Auth on mount / across refreshes
+  useEffect(() => {
+    const sub = subscribeAuth(session => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+        const uname = session.user.user_metadata?.username
+          ?? localStorage.getItem(ADMIN_CREATED_KEY)
+          ?? 'admin';
+        setUsername(uname);
+      } else {
+        setIsLoggedIn(false);
+        setUsername(null);
+      }
+    });
+    return () => sub.unsubscribe();
+  }, []);
+
+  const login = useCallback(async (_uname, password) => {
+    const ok = await verifyAdmin(password);
     if (ok) {
-      saveSession(uname);
+      const stored = localStorage.getItem(ADMIN_CREATED_KEY) ?? _uname;
       setIsLoggedIn(true);
-      setUsername(uname);
+      setUsername(stored);
     }
     return ok;
   }, []);
 
-  const logout = useCallback(() => {
-    clearSession();
+  const logout = useCallback(async () => {
+    await signOutAdmin();
     setIsLoggedIn(false);
     setUsername(null);
   }, []);
 
-  const createAccount = useCallback((uname, password) => {
-    try {
-      saveAdmin(uname, password);
-      saveSession(uname);
-      setIsLoggedIn(true);
-      setUsername(uname);
-      return true;
-    } catch {
-      return false;
-    }
+  // throws 'ALREADY_EXISTS' if account already exists in Supabase
+  const createAccount = useCallback(async (uname, password) => {
+    await saveAdmin(uname, password);
+    setIsLoggedIn(true);
+    setUsername(uname);
   }, []);
 
   const requireAdmin = useCallback((action) => {

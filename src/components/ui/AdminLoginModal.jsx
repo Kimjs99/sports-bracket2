@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Eye, EyeOff, ShieldCheck, KeyRound, LogOut, User } from 'lucide-react';
+import { X, Eye, EyeOff, ShieldCheck, KeyRound, LogOut, User, Loader } from 'lucide-react';
 import { useAdmin } from '../../contexts/AdminContext';
 import { hasAdmin } from '../../utils/adminStorage';
 
@@ -12,27 +12,41 @@ export default function AdminLoginModal() {
   const [p2, setP2] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   function close() { setModalOpen(false); }
 
-  function submit() {
+  async function submit() {
     setError('');
-    if (isCreating) {
-      if (!uname.trim()) { setError('아이디를 입력하세요.'); return; }
-      if (p.length < 4) { setError('비밀번호는 4자 이상이어야 합니다.'); return; }
-      if (p !== p2) { setError('비밀번호가 일치하지 않습니다.'); return; }
-      const ok = createAccount(uname.trim(), p);
-      if (ok) { onSuccess(); }
-      else { setError('계정 생성에 실패했습니다.'); }
-    } else {
-      const ok = login(uname, p);
-      if (ok) { onSuccess(); }
-      else { setError('아이디 또는 비밀번호가 올바르지 않습니다.'); }
+    setLoading(true);
+    try {
+      if (isCreating) {
+        if (!uname.trim()) { setError('아이디를 입력하세요.'); return; }
+        if (p.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return; }
+        if (p !== p2) { setError('비밀번호가 일치하지 않습니다.'); return; }
+        try {
+          await createAccount(uname.trim(), p);
+          onSuccess();
+        } catch (e) {
+          if (e.message === 'ALREADY_EXISTS') {
+            setIsCreating(false);
+            setError('이미 계정이 있습니다. 비밀번호로 로그인해 주세요.');
+          } else {
+            setError('계정 생성에 실패했습니다. 다시 시도해 주세요.');
+          }
+        }
+      } else {
+        const ok = await login(uname, p);
+        if (ok) { onSuccess(); }
+        else { setError('비밀번호가 올바르지 않습니다.'); }
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     close();
   }
 
@@ -106,7 +120,7 @@ export default function AdminLoginModal() {
                     type={showPw ? 'text' : 'password'} value={p}
                     onChange={e => { setP(e.target.value); setError(''); }}
                     onKeyDown={e => e.key === 'Enter' && submit()}
-                    placeholder={isCreating ? '비밀번호 (4자 이상)' : '비밀번호'}
+                    placeholder={isCreating ? '비밀번호 (6자 이상)' : '비밀번호'}
                     className="w-full border border-gray-200 dark:border-gray-600 rounded-lg pl-8 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
                   />
                   <button
@@ -142,8 +156,10 @@ export default function AdminLoginModal() {
 
               <button
                 onClick={submit}
-                className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                disabled={loading}
+                className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
               >
+                {loading && <Loader size={14} className="animate-spin" />}
                 {isCreating ? '계정 만들기' : '로그인'}
               </button>
             </div>
