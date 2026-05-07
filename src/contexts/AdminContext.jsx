@@ -1,9 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { hasAdmin, saveAdmin, verifyAdmin, signOutAdmin, subscribeAuth } from '../utils/adminStorage';
+import { hasAdmin, saveAdmin, verifyAdmin, signOutAdmin, subscribeAuth, ADMIN_CREATED_KEY } from '../utils/adminStorage';
 
 const Ctx = createContext(null);
-
-const ADMIN_CREATED_KEY = 'tournament_admin_created_v1';
 
 export function AdminProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);

@@ -87,7 +87,7 @@ export function reducer(state, action) {
       return {
         ...state,
         tournament: data,
-        setupMeta: { schoolLevel: data.meta.schoolLevel, gender: data.meta.gender ?? GENDER_TYPES[2], sport: data.meta.sport },
+        setupMeta: { schoolLevel: data.meta.schoolLevel, gender: data.meta.gender ?? GENDER_TYPES[2], sport: data.meta.sport, gameFormat: data.meta.gameFormat ?? 'tournament' },
         setupTeams: [...data.teams],
         currentScreen: screen,
       };

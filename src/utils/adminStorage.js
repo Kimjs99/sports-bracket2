@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 // Single admin account — uses a fixed synthetic email internally.
 // Username is a display label stored in Supabase user_metadata.
 const ADMIN_EMAIL = 'admin@school-bracket.app';
-const ADMIN_CREATED_KEY = 'tournament_admin_created_v1'; // value = username string
+export const ADMIN_CREATED_KEY = 'tournament_admin_created_v1'; // value = username string
 
 export function hasAdmin() {
   return !!localStorage.getItem(ADMIN_CREATED_KEY);
