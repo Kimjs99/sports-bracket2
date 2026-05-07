@@ -196,6 +196,219 @@ export function calcLeagueStandings(teams, rounds) {
   );
 }
 
+// ── Group Tournament (조별리그 → 토너먼트) ────────────────────────────────────
+
+export function calcGroupConfig(teamCount) {
+  // advancing teams = smallest power-of-2 ≥ max(4, ceil(teamCount/3))
+  // ensures group size ≤ 6 and ≥ 3
+  const min = Math.max(4, Math.ceil(teamCount / 3));
+  const knockoutSize = nextPowerOfTwo(min);
+  return { groupCount: knockoutSize / 2, advancePerGroup: 2, knockoutSize };
+}
+
+function generateGroupRounds(groupTeams, groupId) {
+  const ts = [...groupTeams];
+  if (ts.length % 2 !== 0) ts.push(null);
+  const size = ts.length;
+  const rounds = [];
+  for (let r = 0; r < size - 1; r++) {
+    const matches = [];
+    for (let m = 0; m < size / 2; m++) {
+      const home = ts[m];
+      const away = ts[size - 1 - m];
+      const isBye = home === null || away === null;
+      matches.push({
+        id: `g${groupId}_r${r + 1}m${m + 1}`,
+        home: isBye ? (home ?? away) : home,
+        away: isBye ? 'BYE' : away,
+        homeScore: null, awayScore: null,
+        winner: isBye ? (home ?? away) : null,
+        isBye,
+        date: null, time: null, venue: null,
+        status: isBye ? MATCH_STATUS.BYE : MATCH_STATUS.SCHEDULED,
+        completedAt: null,
+      });
+    }
+    rounds.push({ roundNum: r + 1, name: `${r + 1}라운드`, matches });
+    const last = ts.splice(size - 1, 1)[0];
+    ts.splice(1, 0, last);
+  }
+  return rounds;
+}
+
+export function generateGroupTournament(teams, _seed) {
+  // Use Math.random() for truly random group assignments each time
+  const shuffled = [...teams];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const { groupCount, advancePerGroup, knockoutSize } = calcGroupConfig(teams.length);
+
+  // Distribute evenly: team i → group (i % groupCount)
+  const groupTeams = Array.from({ length: groupCount }, () => []);
+  shuffled.forEach((team, i) => groupTeams[i % groupCount].push(team));
+
+  const groups = groupTeams.map((gt, i) => {
+    const id = String.fromCharCode(65 + i); // 'A', 'B', ...
+    return { id, name: `${id}조`, teams: gt, rounds: generateGroupRounds(gt, id) };
+  });
+
+  return { groups, knockout: null, groupCount, advancePerGroup, knockoutSize, bracketSize: knockoutSize, byeCount: 0 };
+}
+
+export function isGroupStageComplete(groups) {
+  return groups.every(g => g.rounds.every(r => r.matches.every(m => m.isBye || m.status === MATCH_STATUS.DONE)));
+}
+
+export function buildKnockoutFromGroups(groups, advancePerGroup) {
+  // Top K teams from each group by standings
+  const groupResults = groups.map(g => {
+    const standings = calcLeagueStandings(g.teams, g.rounds);
+    return standings.slice(0, advancePerGroup).map(s => s.team);
+  });
+
+  // Cross-seed so group winner plays runner-up from different group
+  // seeds = [A1, B2, C1, D2, B1, A2, D1, C2] for G=4
+  const G = groups.length;
+  const seeds = [];
+  for (let i = 0; i < G; i += 2) {
+    seeds.push(groupResults[i][0]);
+    seeds.push(groupResults[i + 1][1]);
+  }
+  for (let i = 0; i < G; i += 2) {
+    seeds.push(groupResults[i + 1][0]);
+    seeds.push(groupResults[i][1]);
+  }
+
+  const bracketSize = seeds.length;
+  const firstMatches = [];
+  for (let i = 0; i < bracketSize / 2; i++) {
+    firstMatches.push({
+      id: `kr1m${i + 1}`,
+      home: seeds[i * 2] ?? null,
+      away: seeds[i * 2 + 1] ?? null,
+      homeScore: null, awayScore: null, winner: null,
+      isBye: false, date: null, time: null, venue: null,
+      status: MATCH_STATUS.SCHEDULED, completedAt: null,
+    });
+  }
+
+  const totalRounds = Math.log2(bracketSize);
+  const rounds = [{ roundNum: 1, name: getRoundName(bracketSize, 1), matches: firstMatches }];
+  for (let r = 2; r <= totalRounds; r++) {
+    const count = bracketSize / Math.pow(2, r);
+    rounds.push({
+      roundNum: r,
+      name: getRoundName(bracketSize, r),
+      matches: Array.from({ length: count }, (_, m) => ({
+        id: `kr${r}m${m + 1}`,
+        home: null, away: null, homeScore: null, awayScore: null, winner: null,
+        isBye: false, date: null, time: null, venue: null,
+        status: MATCH_STATUS.SCHEDULED, completedAt: null,
+      })),
+    });
+  }
+  return { rounds };
+}
+
+export function submitGroupTournamentResult(tournament, matchId, homeScore, awayScore) {
+  const { bracket } = tournament;
+
+  // Search in group rounds first
+  let foundInGroup = false;
+  const newGroups = bracket.groups.map(g => ({
+    ...g,
+    rounds: g.rounds.map(r => {
+      if (!r.matches.some(m => m.id === matchId)) return r;
+      foundInGroup = true;
+      return {
+        ...r,
+        matches: r.matches.map(m => {
+          if (m.id !== matchId) return m;
+          const winner = homeScore !== awayScore ? (homeScore > awayScore ? m.home : m.away) : null;
+          return { ...m, homeScore, awayScore, winner, status: MATCH_STATUS.DONE, completedAt: new Date().toISOString() };
+        }),
+      };
+    }),
+  }));
+
+  if (foundInGroup) {
+    let knockout = bracket.knockout;
+    if (!knockout && isGroupStageComplete(newGroups)) {
+      knockout = buildKnockoutFromGroups(newGroups, tournament.meta.advancePerGroup ?? 2);
+    }
+    return {
+      ...tournament,
+      meta: { ...tournament.meta, phase: knockout ? 'knockout' : 'group' },
+      bracket: { groups: newGroups, knockout },
+    };
+  }
+
+  // Search in knockout rounds
+  if (bracket.knockout) {
+    const knockoutRounds = submitMatchResult(bracket.knockout.rounds, matchId, homeScore, awayScore);
+    return { ...tournament, bracket: { ...bracket, knockout: { rounds: knockoutRounds } } };
+  }
+
+  return tournament;
+}
+
+export function editGroupTournamentResult(tournament, matchId) {
+  const { bracket } = tournament;
+
+  // Check if in groups
+  let foundInGroup = false;
+  for (const g of bracket.groups) {
+    if (g.rounds.some(r => r.matches.some(m => m.id === matchId))) { foundInGroup = true; break; }
+  }
+
+  if (foundInGroup) {
+    const newGroups = bracket.groups.map(g => ({
+      ...g,
+      rounds: g.rounds.map(r => ({
+        ...r,
+        matches: r.matches.map(m =>
+          m.id === matchId
+            ? { ...m, homeScore: null, awayScore: null, winner: null, status: MATCH_STATUS.SCHEDULED, completedAt: null }
+            : m
+        ),
+      })),
+    }));
+    // Reset knockout when editing a group match (standings may change)
+    return {
+      ...tournament,
+      meta: { ...tournament.meta, phase: 'group' },
+      bracket: { groups: newGroups, knockout: null },
+    };
+  }
+
+  // In knockout — reset match + clear propagated slot in next round
+  if (bracket.knockout) {
+    let fRound = -1, fMatch = -1;
+    bracket.knockout.rounds.forEach((r, ri) => r.matches.forEach((m, mi) => {
+      if (m.id === matchId) { fRound = ri; fMatch = mi; }
+    }));
+    if (fRound === -1) return tournament;
+    const newRounds = bracket.knockout.rounds.map((r, ri) => ({
+      ...r,
+      matches: r.matches.map((m, mi) => {
+        if (ri === fRound && mi === fMatch) {
+          return { ...m, homeScore: null, awayScore: null, winner: null, status: MATCH_STATUS.SCHEDULED, completedAt: null };
+        }
+        if (ri === fRound + 1 && mi === Math.floor(fMatch / 2)) {
+          const slot = fMatch % 2 === 0 ? 'home' : 'away';
+          return { ...m, [slot]: null, winner: null, homeScore: null, awayScore: null, status: MATCH_STATUS.SCHEDULED, completedAt: null };
+        }
+        return m;
+      }),
+    }));
+    return { ...tournament, bracket: { ...bracket, knockout: { rounds: newRounds } } };
+  }
+
+  return tournament;
+}
+
 // ── Tournament (single elimination) ──────────────────────────────────────────
 
 export function submitMatchResult(bracketRounds, matchId, homeScore, awayScore) {

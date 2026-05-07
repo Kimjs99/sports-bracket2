@@ -2,14 +2,14 @@ import { useContext, useState, useEffect, useMemo } from 'react';
 import {
   Plus, Trophy, Lock, Settings, Swords, CalendarDays,
   Users, Layers, Bell, Search, MapPin, Clock, Trash2, HelpCircle,
-  Share2, Check, LinkIcon, RotateCcw, AlertTriangle,
+  Share2, Check, LinkIcon, RotateCcw, AlertTriangle, ChevronRight, ArrowLeft,
 } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { SCREENS, MATCH_STATUS, SPORT_EMOJI } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
 import { loadTournament, saveTournament } from '../utils/storage';
-import { generateBracket } from '../utils/tournament';
+import { generateBracket, generateGroupTournament } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
 import HelpModal from './ui/HelpModal';
 import ConfirmDialog from './ui/ConfirmDialog';
@@ -212,34 +212,6 @@ function SchoolScheduleTab({ rounds, teams }) {
   );
 }
 
-// ─── SportGroupTabs ────────────────────────────────────────────────────────────
-
-function SportGroupTabs({ groups, activeKey, onSelect }) {
-  if (groups.length <= 1) return null;
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap mb-3">
-      {groups.map(g => {
-        const isActive = g.key === activeKey;
-        return (
-          <button key={g.key} onClick={() => onSelect(g.key)}
-            className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-xl font-semibold border transition-all
-              ${isActive
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-              }`}>
-            <span>{SPORT_EMOJI[g.sport] ?? '🏅'}</span>
-            <span>{g.sport}</span>
-            {g.gender !== '혼성' && <span className="opacity-75">{g.gender}</span>}
-            <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/25' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-              {g.items.length}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── TournamentChasu ───────────────────────────────────────────────────────────
 
 function TournamentChasu({ list, currentId, onSelect }) {
@@ -282,6 +254,102 @@ function EmptyLevel({ level, isLoggedIn, onNew, onLogin }) {
   );
 }
 
+// ─── LevelOverview ─────────────────────────────────────────────────────────────
+
+function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLogin }) {
+  const colors = LEVEL_COLOR[level];
+  return (
+    <div>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors?.badge}`}>{level}부</span>
+            <h2 className="font-bold text-gray-900 dark:text-gray-100">종목별 현황</h2>
+            <span className="text-xs text-gray-400 dark:text-gray-500">{sportGroups.length}개 종목</span>
+          </div>
+          {isAdmin ? (
+            <button onClick={onNew}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+              <Plus size={12} /> 새 대진 만들기
+            </button>
+          ) : (
+            <button onClick={onLogin}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <Lock size={12} /> 관리자 로그인
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {sportGroups.map(group => {
+            const latest = group.items[0];
+            const count = group.items.length;
+            const isOver = !!latest.winner;
+            const isInProgress = !isOver && latest.doneCount > 0;
+            const pct = latest.totalNonBye > 0 ? Math.round((latest.doneCount / latest.totalNonBye) * 100) : 0;
+            const genderLabel = group.gender !== '혼성' ? ` ${group.gender}` : '';
+            const formatLabel = latest.gameFormat === 'league' ? '리그' : latest.gameFormat === 'group_tournament' ? '조별리그' : '토너먼트';
+
+            return (
+              <button key={group.key} onClick={() => onSelectSport(group.key)}
+                className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-left shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all group">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-2xl mb-1">{SPORT_EMOJI[group.sport] ?? '🏅'}</div>
+                    <div className="font-bold text-gray-900 dark:text-gray-100 text-base truncate">
+                      {group.sport}{genderLabel}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {latest.totalTeams}팀 · {formatLabel}{count > 1 ? ` · ${count}차 대진` : ''}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    {isOver ? (
+                      <span className="text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Trophy size={9} /> 종료
+                      </span>
+                    ) : isInProgress ? (
+                      <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                        진행중
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                        대기중
+                      </span>
+                    )}
+                    <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 group-hover:text-blue-500 transition-colors" />
+                  </div>
+                </div>
+
+                {isOver ? (
+                  <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300 font-medium">
+                    <Trophy size={10} /> 우승: {latest.winner}
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
+                      <span>진행률</span>
+                      <span>{pct}% ({latest.doneCount}/{latest.totalNonBye})</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : pct > 0 ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-600'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── LevelPanel ───────────────────────────────────────────────────────────────
 
 function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requireAdmin, setModalOpen }) {
@@ -296,40 +364,77 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
     return [...map.values()];
   }, [summaryList]);
 
-  const [activeSportKey, setActiveSportKey] = useState(() => sportGroups[0]?.key ?? null);
+  // null = show overview (when multiple sport groups)
+  const [activeSportKey, setActiveSportKey] = useState(null);
 
-  const activeGroup = sportGroups.find(g => g.key === activeSportKey) ?? sportGroups[0] ?? null;
-  const filteredList = activeGroup?.items ?? summaryList;
-
-  const [currentId, setCurrentId] = useState(() => filteredList[0]?.id ?? null);
-  const [tournament, setTournament] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
-
-  // 종목 탭 변경 시 currentId 리셋
+  // Auto-select when there's only one sport group
   useEffect(() => {
-    const group = sportGroups.find(g => g.key === activeSportKey) ?? sportGroups[0];
-    if (group?.items[0]) setCurrentId(group.items[0].id);
-  }, [activeSportKey]);
-
-  // summaryList 변경 시 activeSportKey 유효성 체크
-  useEffect(() => {
-    if (sportGroups.length > 0 && !sportGroups.find(g => g.key === activeSportKey)) {
+    if (sportGroups.length === 1) {
       setActiveSportKey(sportGroups[0].key);
+    } else if (sportGroups.length === 0) {
+      setActiveSportKey(null);
     }
   }, [sportGroups]);
+
+  const activeGroup = activeSportKey ? (sportGroups.find(g => g.key === activeSportKey) ?? null) : null;
+  const filteredList = activeGroup?.items ?? [];
+
+  const [currentId, setCurrentId] = useState(null);
+  const [tournament, setTournament] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
   const [copied, setCopied] = useState(false);
   const [confirmResetBracket, setConfirmResetBracket] = useState(false);
 
+  // Keep currentId valid when filteredList changes (including sport group changes)
+  useEffect(() => {
+    if (filteredList.length > 0) {
+      if (!filteredList.find(t => t.id === currentId)) {
+        setCurrentId(filteredList[0].id);
+      }
+    } else {
+      setCurrentId(null);
+    }
+  }, [filteredList]);
+
+  // Load full tournament data when currentId changes
+  useEffect(() => {
+    if (currentId) {
+      loadTournament(currentId).then(data => {
+        setTournament(data);
+      });
+    } else {
+      setTournament(null);
+    }
+  }, [currentId, summaryList]);
+
+  function handleNew() {
+    requireAdmin(() => {
+      dispatch({ type: ACTIONS.RESET_TOURNAMENT });
+      dispatch({ type: ACTIONS.SET_META, payload: { schoolLevel: level } });
+      dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.SETUP } });
+    });
+  }
+
   async function resetBracket() {
     if (!tournament) return;
-    const bracketData = generateBracket(tournament.teams, tournament.meta.seed);
-    const updated = {
-      ...tournament,
-      meta: { ...tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
-      bracket: { rounds: bracketData.rounds },
-    };
+    let updated;
+    if (tournament.meta.gameFormat === 'group_tournament') {
+      const bracketData = generateGroupTournament(tournament.teams, tournament.meta.seed);
+      updated = {
+        ...tournament,
+        meta: { ...tournament.meta, bracketSize: bracketData.knockoutSize, byeCount: 0, phase: 'group', status: 'in_progress' },
+        bracket: { groups: bracketData.groups, knockout: null },
+      };
+    } else {
+      const bracketData = generateBracket(tournament.teams, tournament.meta.seed);
+      updated = {
+        ...tournament,
+        meta: { ...tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
+        bracket: { rounds: bracketData.rounds },
+      };
+    }
     await saveTournament(updated);
     setTournament(updated);
     asyncDispatch({ type: ACTIONS.LOAD_TOURNAMENT_LIST });
@@ -344,36 +449,6 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  useEffect(() => {
-    const id = currentId ?? summaryList[0]?.id;
-    if (id) {
-      loadTournament(id).then(data => {
-        setTournament(data);
-        setCurrentId(id);
-      });
-    } else {
-      setTournament(null);
-    }
-  }, [currentId, summaryList]);
-
-  useEffect(() => {
-    if (summaryList.length > 0 && !summaryList.find(t => t.id === currentId)) {
-      setCurrentId(summaryList[0].id);
-    }
-  }, [summaryList]);
-
-  function navigate(targetScreen) {
-    asyncDispatch({ type: ACTIONS.SELECT_TOURNAMENT, payload: { id: currentId, targetScreen } });
-  }
-
-  function handleNew() {
-    requireAdmin(() => {
-      dispatch({ type: ACTIONS.RESET_TOURNAMENT });
-      dispatch({ type: ACTIONS.SET_META, payload: { schoolLevel: level } });
-      dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.SETUP } });
     });
   }
 
@@ -399,16 +474,60 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
     setTournament(updated);
   }
 
-  if (!tournament) {
+  function navigate(targetScreen) {
+    asyncDispatch({ type: ACTIONS.SELECT_TOURNAMENT, payload: { id: currentId, targetScreen } });
+  }
+
+  // ── Early returns ──────────────────────────────────────────────────────────
+
+  if (summaryList.length === 0) {
     return <EmptyLevel level={level} isLoggedIn={isAdmin} onNew={handleNew} onLogin={() => setModalOpen(true)} />;
   }
 
+  // Show overview when multiple sport groups and none selected
+  if (!activeGroup) {
+    return (
+      <LevelOverview
+        level={level}
+        sportGroups={sportGroups}
+        onSelectSport={setActiveSportKey}
+        isAdmin={isAdmin}
+        onNew={handleNew}
+        onLogin={() => setModalOpen(true)}
+      />
+    );
+  }
+
+  // Loading state
+  if (!tournament) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-gray-400 dark:text-gray-500 text-sm">불러오는 중…</div>
+      </div>
+    );
+  }
+
+  // ── Detail view ────────────────────────────────────────────────────────────
+
   const { meta, bracket, notices, teams } = tournament;
-  const rounds = bracket.rounds;
+  const isGroupTournament = meta.gameFormat === 'group_tournament';
+
+  let rounds;
+  if (isGroupTournament) {
+    const groupRounds = bracket.groups.flatMap(g =>
+      g.rounds.map(r => ({ ...r, name: `${g.name} ${r.name}` }))
+    );
+    rounds = [...groupRounds, ...(bracket.knockout?.rounds ?? [])];
+  } else {
+    rounds = bracket.rounds;
+  }
+
   const allMatches = rounds.flatMap(r => r.matches);
   const doneCount = allMatches.filter(m => m.status === MATCH_STATUS.DONE).length;
   const totalNonBye = allMatches.filter(m => !m.isBye).length;
-  const { winner, runnerUp, third, fourth } = getFinalRankings(rounds);
+
+  const rankingRounds = isGroupTournament ? (bracket.knockout?.rounds ?? []) : rounds;
+  const { winner, runnerUp, third, fourth } = getFinalRankings(rankingRounds);
   const isTournamentOver = !!winner;
 
   const doneMatchesFeed = rounds
@@ -427,17 +546,26 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
     { id: 'notices', label: `공지 (${notices.length})`, adminOnly: true },
   ];
 
-  const formatLabel = meta.gameFormat === 'league' ? '리그전' : '토너먼트';
+  const formatLabel = meta.gameFormat === 'league' ? '리그전' : meta.gameFormat === 'group_tournament' ? '조별리그' : '토너먼트';
   const genderLabel = meta.gender && meta.gender !== '혼성' ? `${meta.gender} ` : '';
 
   return (
     <div className="space-y-0">
+      {/* Back to overview button (only when multiple sport groups) */}
+      {sportGroups.length > 1 && (
+        <div className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
+          <div className="max-w-4xl mx-auto">
+            <button onClick={() => setActiveSportKey(null)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">
+              <ArrowLeft size={13} /> 종목 목록으로
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tournament info + admin controls */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="max-w-4xl mx-auto">
-          {/* 종목 그룹 탭 */}
-          <SportGroupTabs groups={sportGroups} activeKey={activeSportKey} onSelect={setActiveSportKey} />
-
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -447,7 +575,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
                 </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-1"><Layers size={11} />{meta.gameFormat === 'league' ? `${meta.bracketSize}팀 리그` : `${meta.bracketSize}강`}</span>
+                <span className="flex items-center gap-1"><Layers size={11} />{isGroupTournament ? `${meta.groupCount}조 → ${meta.knockoutSize}강` : meta.gameFormat === 'league' ? `${meta.bracketSize}팀 리그` : `${meta.bracketSize}강`}</span>
                 <span className="flex items-center gap-1"><Users size={11} />{meta.totalTeams}팀</span>
                 <span className="flex items-center gap-1">
                   <CalendarDays size={11} />
@@ -595,9 +723,15 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <StatCard label="참가팀" value={`${meta.totalTeams}팀`} color="blue" />
-                  <StatCard label="브라켓" value={`${meta.bracketSize}강`} color="indigo" />
+                  {isGroupTournament
+                    ? <StatCard label={`${meta.groupCount}조 편성`} value={`${meta.knockoutSize}강`} color="indigo" />
+                    : <StatCard label="브라켓" value={`${meta.bracketSize}강`} color="indigo" />
+                  }
                   <StatCard label="완료 경기" value={`${doneCount}/${totalNonBye}`} color="green" />
-                  <StatCard label="부전승" value={`${meta.byeCount}개`} color="orange" />
+                  {isGroupTournament
+                    ? <StatCard label="단계" value={bracket.knockout ? '토너먼트' : '조별리그'} color="orange" />
+                    : <StatCard label="부전승" value={`${meta.byeCount}개`} color="orange" />
+                  }
                 </div>
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -615,12 +749,12 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-3">라운드별 진행</h3>
               <div className="space-y-2">
-                {rounds.map(r => {
+                {rounds.map((r, idx) => {
                   const real = r.matches.filter(m => !m.isBye);
                   const done = r.matches.filter(m => m.status === MATCH_STATUS.DONE);
                   const pct = real.length > 0 ? (done.length / real.length) * 100 : 100;
                   return (
-                    <div key={r.roundNum}>
+                    <div key={`${r.name}_${idx}`}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-600 dark:text-gray-300">{r.name}</span>
                         <span className="text-gray-400 dark:text-gray-500">{done.length}/{real.length}</span>
@@ -667,7 +801,19 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
         {/* 대진표 */}
         {activeTab === 'bracket' && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <BracketTree rounds={rounds} />
+            {isGroupTournament ? (
+              bracket.knockout ? (
+                <BracketTree rounds={bracket.knockout.rounds} />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+                  <Layers size={32} className="opacity-30" />
+                  <p className="text-sm">조별 리그 진행 중입니다</p>
+                  <p className="text-xs">모든 조별 경기 완료 후 토너먼트 대진이 생성됩니다</p>
+                </div>
+              )
+            ) : (
+              <BracketTree rounds={rounds} />
+            )}
           </div>
         )}
 
@@ -776,6 +922,7 @@ export default function Home() {
   const { isLoggedIn, requireAdmin, setModalOpen } = useAdmin();
   const [activeLevel, setActiveLevel] = useState('고등');
   const [helpOpen, setHelpOpen] = useState(false);
+  // false | 'step1' | 'step2'
   const [confirmResetAll, setConfirmResetAll] = useState(false);
 
   useEffect(() => {
@@ -877,11 +1024,11 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-red-700 dark:text-red-400">전체 초기화</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">중등부·고등부 모든 대진 데이터를 삭제합니다.</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">모든 학교급의 대진 데이터를 삭제합니다.</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setConfirmResetAll(true)}
+                  onClick={() => setConfirmResetAll('step1')}
                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
                 >
                   <RotateCcw size={12} /> 전체 초기화
@@ -892,12 +1039,27 @@ export default function Home() {
         )}
       </div>
 
-      {confirmResetAll && (
+      {/* 전체 초기화 — step 1 */}
+      {confirmResetAll === 'step1' && (
         <ConfirmDialog
           title="전체 초기화"
-          message="중등부·고등부의 모든 대진 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다."
+          message="초등·중등·고등부의 모든 대진 데이터를 영구 삭제합니다. 계속하시겠습니까?"
+          confirmLabel="다음 단계"
+          onConfirm={() => setConfirmResetAll('step2')}
+          onCancel={() => setConfirmResetAll(false)}
+        />
+      )}
+
+      {/* 전체 초기화 — step 2 (final) */}
+      {confirmResetAll === 'step2' && (
+        <ConfirmDialog
+          title="⚠️ 최종 확인"
+          message="이 작업은 절대 되돌릴 수 없습니다. 모든 대진 데이터가 완전히 삭제됩니다. 정말로 진행하시겠습니까?"
           confirmLabel="전체 삭제"
-          onConfirm={() => asyncDispatch({ type: ACTIONS.RESET_ALL_TOURNAMENTS })}
+          onConfirm={() => {
+            asyncDispatch({ type: ACTIONS.RESET_ALL_TOURNAMENTS });
+            setConfirmResetAll(false);
+          }}
           onCancel={() => setConfirmResetAll(false)}
         />
       )}

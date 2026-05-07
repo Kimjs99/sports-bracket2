@@ -1,5 +1,5 @@
 import { useContext, useState, useRef } from 'react';
-import { RefreshCw, AlertTriangle, ChevronRight, ChevronLeft, History, X, Clock, Hash, Lock } from 'lucide-react';
+import { RefreshCw, AlertTriangle, ChevronRight, ChevronLeft, History, X, Clock, Hash, Lock, Trophy } from 'lucide-react';
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { SCREENS, SPORT_EMOJI, GAME_FORMATS } from '../constants';
@@ -16,6 +16,7 @@ function buildBracketHistory(tournament) {
       num: idx + 1,
       seed: h.seed,
       teams: h.teams,
+      gameFormat: h.gameFormat ?? meta.gameFormat,
       createdAt: idx === 0 ? meta.createdAt : history[idx - 1].reshuffledAt,
       replacedAt: h.reshuffledAt,
       isCurrent: false,
@@ -25,6 +26,7 @@ function buildBracketHistory(tournament) {
     num: history.length + 1,
     seed: meta.seed,
     teams: [...teams],
+    gameFormat: meta.gameFormat,
     createdAt: history.length > 0 ? history[history.length - 1].reshuffledAt : meta.createdAt,
     replacedAt: null,
     isCurrent: true,
@@ -47,16 +49,12 @@ function ReshuffleDialog({ onConfirm, onCancel }) {
           입력된 일정·결과는 초기화되며, 이전 대진은 이력에 보존됩니다.
         </p>
         <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
+          <button onClick={onCancel}
+            className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
             취소
           </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700"
-          >
+          <button onClick={onConfirm}
+            className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700">
             재구성하기
           </button>
         </div>
@@ -135,9 +133,11 @@ function HistorySidebar({ entries, onSelectEntry }) {
               className={`relative transition-colors
                 ${entry.isCurrent
                   ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500'
-                  : 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-l-4 border-l-transparent'
+                  : entry.gameFormat !== 'group_tournament'
+                    ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-l-4 border-l-transparent'
+                    : 'border-l-4 border-l-transparent opacity-60'
                 }`}
-              onClick={() => !entry.isCurrent && onSelectEntry(entry)}
+              onClick={() => !entry.isCurrent && entry.gameFormat !== 'group_tournament' && onSelectEntry(entry)}
             >
               <div className="px-4 py-3">
                 <div className="flex items-center justify-between mb-1">
@@ -157,7 +157,9 @@ function HistorySidebar({ entries, onSelectEntry }) {
                 <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
                   <Hash size={9} className="flex-shrink-0" />
                   <span className="font-mono">{String(entry.seed).slice(-8)}</span>
-                  {!entry.isCurrent && <span className="ml-auto text-indigo-400 text-xs">대진 보기 →</span>}
+                  {!entry.isCurrent && entry.gameFormat !== 'group_tournament' && (
+                    <span className="ml-auto text-indigo-400 text-xs">대진 보기 →</span>
+                  )}
                 </div>
                 {entry.replacedAt && (
                   <div className="text-xs text-orange-400 mt-1 flex items-center gap-1">
@@ -204,7 +206,7 @@ function ScheduleInput({ rounds, dispatch }) {
         <div key={match.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
-              {match.roundName} · {match.id}
+              {match.roundName}
             </span>
             <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
               {match.home ?? '—'} <span className="text-gray-400 mx-1">vs</span> {match.away ?? '—'}
@@ -213,31 +215,22 @@ function ScheduleInput({ rounds, dispatch }) {
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">날짜</label>
-              <input
-                type="date"
-                defaultValue={match.date ?? ''}
+              <input type="date" defaultValue={match.date ?? ''}
                 onBlur={e => handleUpdate(match.id, 'date', e.target.value || null)}
-                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100"
-              />
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100" />
             </div>
             <div>
               <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">시간</label>
-              <input
-                type="time"
-                defaultValue={match.time ?? ''}
+              <input type="time" defaultValue={match.time ?? ''}
                 onBlur={e => handleUpdate(match.id, 'time', e.target.value || null)}
-                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100"
-              />
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100" />
             </div>
             <div>
               <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">장소</label>
-              <input
-                type="text"
-                defaultValue={match.venue ?? ''}
+              <input type="text" defaultValue={match.venue ?? ''}
                 onBlur={e => handleUpdate(match.id, 'venue', e.target.value || null)}
                 placeholder="예: 체육관A"
-                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
-              />
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500" />
             </div>
           </div>
         </div>
@@ -246,12 +239,19 @@ function ScheduleInput({ rounds, dispatch }) {
   );
 }
 
-function LeagueStandings({ teams, rounds }) {
+function LeagueStandings({ teams, rounds, advancePerGroup, groupName }) {
   const rows = calcLeagueStandings(teams, rounds);
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300">
-        순위표
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <span className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+          {groupName ? `${groupName} 순위표` : '순위표'}
+        </span>
+        {advancePerGroup && (
+          <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full font-medium">
+            상위 {advancePerGroup}팀 진출
+          </span>
+        )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -270,23 +270,30 @@ function LeagueStandings({ teams, rounds }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-            {rows.map((r, i) => (
-              <tr key={r.team} className={i === 0 ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}>
-                <td className="px-3 py-2.5 text-center text-xs text-gray-400">{i + 1}</td>
-                <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-100">
-                  {i === 0 && r.played > 0 && <span className="mr-1">🥇</span>}
-                  {r.team}
-                </td>
-                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.played}</td>
-                <td className="px-3 py-2.5 text-center text-green-600 dark:text-green-400 font-medium">{r.win}</td>
-                <td className="px-3 py-2.5 text-center text-gray-500">{r.draw}</td>
-                <td className="px-3 py-2.5 text-center text-red-500">{r.loss}</td>
-                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.gf}</td>
-                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.ga}</td>
-                <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.gf - r.ga > 0 ? `+${r.gf - r.ga}` : r.gf - r.ga}</td>
-                <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.pts}</td>
-              </tr>
-            ))}
+            {rows.map((r, i) => {
+              const isAdvancing = advancePerGroup && i < advancePerGroup;
+              return (
+                <tr key={r.team} className={
+                  isAdvancing
+                    ? i === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-blue-50/50 dark:bg-blue-900/10'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                }>
+                  <td className="px-3 py-2.5 text-center text-xs text-gray-400">{i + 1}</td>
+                  <td className="px-3 py-2.5 font-medium text-gray-800 dark:text-gray-100">
+                    {isAdvancing && <span className="mr-1 text-blue-500">▲</span>}
+                    {r.team}
+                  </td>
+                  <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.played}</td>
+                  <td className="px-3 py-2.5 text-center text-green-600 dark:text-green-400 font-medium">{r.win}</td>
+                  <td className="px-3 py-2.5 text-center text-gray-500">{r.draw}</td>
+                  <td className="px-3 py-2.5 text-center text-red-500">{r.loss}</td>
+                  <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.gf}</td>
+                  <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.ga}</td>
+                  <td className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300">{r.gf - r.ga > 0 ? `+${r.gf - r.ga}` : r.gf - r.ga}</td>
+                  <td className="px-3 py-2.5 text-center font-bold text-blue-600 dark:text-blue-400">{r.pts}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -313,14 +320,44 @@ function LeagueSchedule({ rounds }) {
                   }
                   <span className={`font-medium ${m.winner === m.away ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'}`}>{m.away}</span>
                 </div>
-                {m.date && (
-                  <span className="text-xs text-gray-400">{m.date} {m.time} {m.venue && `· ${m.venue}`}</span>
-                )}
+                {m.date && <span className="text-xs text-gray-400">{m.date} {m.time} {m.venue && `· ${m.venue}`}</span>}
               </div>
             ))}
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function GroupStandingsView({ groups, advancePerGroup }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {groups.map(g => (
+        <LeagueStandings key={g.id} teams={g.teams} rounds={g.rounds} advancePerGroup={advancePerGroup} groupName={g.name} />
+      ))}
+    </div>
+  );
+}
+
+function GroupScheduleView({ groups }) {
+  const [activeGroup, setActiveGroup] = useState(groups[0]?.id ?? null);
+  const group = groups.find(g => g.id === activeGroup) ?? groups[0];
+  return (
+    <div>
+      <div className="flex gap-1.5 flex-wrap mb-4">
+        {groups.map(g => (
+          <button key={g.id} onClick={() => setActiveGroup(g.id)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors
+              ${activeGroup === g.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-blue-400'
+              }`}>
+            {g.name}
+          </button>
+        ))}
+      </div>
+      {group && <LeagueSchedule rounds={group.rounds} />}
     </div>
   );
 }
@@ -332,10 +369,8 @@ function AdminGate({ message, onLogin }) {
         <Lock size={28} className="text-gray-400 dark:text-gray-500" />
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{message}</p>
-      <button
-        onClick={onLogin}
-        className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
-      >
+      <button onClick={onLogin}
+        className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
         관리자 로그인
       </button>
     </div>
@@ -354,24 +389,61 @@ export default function Draw() {
 
   const { meta, bracket } = tournament;
   const isLeague = meta.gameFormat === 'league';
+  const isGroupTournament = meta.gameFormat === 'group_tournament';
   const historyEntries = buildBracketHistory(tournament);
   const sportEmoji = SPORT_EMOJI[meta.sport] ?? '🏅';
-  const formatLabel = GAME_FORMATS.find(f => f.id === meta.gameFormat)?.label ?? '토너먼트';
+
+  let formatLabel;
+  if (isGroupTournament) {
+    formatLabel = `조별리그→${meta.knockoutSize}강`;
+  } else {
+    formatLabel = GAME_FORMATS.find(f => f.id === meta.gameFormat)?.label ?? '토너먼트';
+  }
 
   function handleReshuffle() {
     dispatch({ type: ACTIONS.RESHUFFLE, payload: { seed: Date.now() } });
   }
 
-  const navItems = isLeague
+  // All rounds for schedule input
+  const allScheduleRounds = isGroupTournament
     ? [
-        { id: 'standings', label: '순위표' },
-        { id: 'bracket',   label: '경기 일정' },
-        { id: 'schedule',  label: '일정 입력' },
+        ...bracket.groups.flatMap(g => g.rounds.map(r => ({ ...r, name: `${g.name} ${r.name}` }))),
+        ...(bracket.knockout?.rounds ?? []),
       ]
-    : [
-        { id: 'bracket',  label: '대진표' },
-        { id: 'schedule', label: '일정 입력' },
-      ];
+    : bracket.rounds;
+
+  // Stat line in header
+  let statLine;
+  if (isGroupTournament) {
+    const groupMatches = bracket.groups.flatMap(g => g.rounds.flatMap(r => r.matches)).filter(m => !m.isBye).length;
+    const knockoutMatches = bracket.knockout ? bracket.knockout.rounds.flatMap(r => r.matches).filter(m => !m.isBye).length : 0;
+    statLine = `${meta.totalTeams}팀 · ${meta.groupCount}개조 · 조당 ${meta.advancePerGroup}팀 진출 · 총 ${groupMatches + knockoutMatches}경기`;
+  } else if (isLeague) {
+    statLine = `${meta.totalTeams}팀 · ${bracket.rounds.length}라운드 · 총 ${bracket.rounds.flatMap(r => r.matches).filter(m => !m.isBye).length}경기`;
+  } else {
+    statLine = `${meta.totalTeams}팀 · ${meta.bracketSize}강 · 부전승 ${meta.byeCount}개`;
+  }
+
+  let navItems;
+  if (isGroupTournament) {
+    navItems = [
+      { id: 'group_standings', label: '조별 순위' },
+      { id: 'group_schedule', label: '조별 경기' },
+      { id: 'knockout', label: `${meta.knockoutSize}강 대진`, disabled: !bracket.knockout },
+      { id: 'schedule', label: '일정 입력' },
+    ];
+  } else if (isLeague) {
+    navItems = [
+      { id: 'standings', label: '순위표' },
+      { id: 'bracket', label: '경기 일정' },
+      { id: 'schedule', label: '일정 입력' },
+    ];
+  } else {
+    navItems = [
+      { id: 'bracket', label: '대진표' },
+      { id: 'schedule', label: '일정 입력' },
+    ];
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -381,8 +453,7 @@ export default function Draw() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => asyncDispatch({ type: ACTIONS.BACK_TO_HOME })}
-              className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-1"
-            >
+              className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-1">
               <ChevronLeft size={15} />
               <span className="hidden sm:inline">목록</span>
             </button>
@@ -391,13 +462,7 @@ export default function Draw() {
               <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">
                 {meta.schoolLevel}부 {meta.gender ? `${meta.gender} ` : ''}{meta.sport} {formatLabel}
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                {meta.totalTeams}팀
-                {isLeague
-                  ? ` · ${bracket.rounds.length}라운드 · 총 ${bracket.rounds.flatMap(r => r.matches).filter(m => !m.isBye).length}경기`
-                  : ` · ${meta.bracketSize}강 · 부전승 ${meta.byeCount}개`
-                }
-              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{statLine}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -407,15 +472,13 @@ export default function Draw() {
             />
             <button
               onClick={() => requireAdmin(() => dispatch({ type: ACTIONS.TOGGLE_RESHUFFLE_CONFIRM, payload: { open: true } }))}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               {isLoggedIn ? <RefreshCw size={13} /> : <Lock size={13} />} 재구성
             </button>
             {isLoggedIn && (
               <button
                 onClick={() => dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.MATCH_PLAY } })}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700">
                 경기 진행 <ChevronRight size={13} />
               </button>
             )}
@@ -425,40 +488,74 @@ export default function Draw() {
         {/* Tabs */}
         <div className="max-w-[1400px] mx-auto px-4 flex gap-0">
           {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
+            <button key={item.id} onClick={() => !item.disabled && setActiveTab(item.id)}
+              disabled={item.disabled}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5
-                ${activeTab === item.id
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-            >
+                ${item.disabled
+                  ? 'border-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                  : activeTab === item.id
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}>
               {item.id === 'schedule' && !isLoggedIn && <Lock size={11} className="text-gray-400" />}
               {item.label}
+              {item.id === 'knockout' && !bracket.knockout && (
+                <span className="text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded-full ml-1">조별리그 진행 중</span>
+              )}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Knockout generated banner */}
+      {isGroupTournament && bracket.knockout && activeTab !== 'knockout' && (
+        <div className="max-w-[1400px] mx-auto px-4 pt-3">
+          <button onClick={() => setActiveTab('knockout')}
+            className="w-full flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-2.5 text-sm text-blue-700 dark:text-blue-400 font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+            <Trophy size={14} className="shrink-0" />
+            🎉 조별 리그 완료! {meta.knockoutSize}강 대진이 생성되었습니다. 클릭하여 확인하세요.
+          </button>
+        </div>
+      )}
+
       {/* Body */}
       <div className="max-w-[1400px] mx-auto p-4 flex flex-col lg:flex-row gap-4 items-start">
         <div className="flex-1 min-w-0">
-          {activeTab === 'standings' && isLeague && (
+
+          {/* Group Tournament tabs */}
+          {isGroupTournament && activeTab === 'group_standings' && (
+            <GroupStandingsView groups={bracket.groups} advancePerGroup={meta.advancePerGroup} />
+          )}
+          {isGroupTournament && activeTab === 'group_schedule' && (
+            <GroupScheduleView groups={bracket.groups} />
+          )}
+          {isGroupTournament && activeTab === 'knockout' && bracket.knockout && (
+            <div ref={bracketRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+                <Trophy size={14} className="text-amber-500" />
+                <span className="font-semibold text-sm text-gray-700 dark:text-gray-300">{meta.knockoutSize}강 본선 대진표</span>
+              </div>
+              <BracketTree rounds={bracket.knockout.rounds} />
+            </div>
+          )}
+
+          {/* League tabs */}
+          {isLeague && activeTab === 'standings' && (
             <LeagueStandings teams={tournament.teams} rounds={bracket.rounds} />
           )}
-          {activeTab === 'bracket' && (
-            isLeague
-              ? <LeagueSchedule rounds={bracket.rounds} />
-              : (
-                <div ref={bracketRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-                  <BracketTree rounds={bracket.rounds} />
-                </div>
-              )
+          {isLeague && activeTab === 'bracket' && <LeagueSchedule rounds={bracket.rounds} />}
+
+          {/* Tournament tab */}
+          {!isLeague && !isGroupTournament && activeTab === 'bracket' && (
+            <div ref={bracketRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <BracketTree rounds={bracket.rounds} />
+            </div>
           )}
+
+          {/* Schedule input */}
           {activeTab === 'schedule' && (
             isLoggedIn
-              ? <ScheduleInput rounds={bracket.rounds} dispatch={dispatch} />
+              ? <ScheduleInput rounds={allScheduleRounds} dispatch={dispatch} />
               : <AdminGate message="일정 입력은 관리자 전용입니다." onLogin={() => setModalOpen(true)} />
           )}
         </div>
@@ -472,7 +569,7 @@ export default function Draw() {
           onCancel={() => dispatch({ type: ACTIONS.TOGGLE_RESHUFFLE_CONFIRM, payload: { open: false } })}
         />
       )}
-      {previewEntry && (
+      {previewEntry && previewEntry.gameFormat !== 'group_tournament' && (
         <BracketPreviewModal entry={previewEntry} onClose={() => setPreviewEntry(null)} />
       )}
     </div>

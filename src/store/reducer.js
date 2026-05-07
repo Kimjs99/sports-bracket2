@@ -1,6 +1,11 @@
 import { ACTIONS } from './actions';
 import { SCREENS, SPORT_NAME, MAX_HISTORY, MATCH_STATUS, GENDER_TYPES } from '../constants';
-import { generateBracket, generateLeague, submitMatchResult, submitLeagueResult } from '../utils/tournament';
+import {
+  generateBracket, generateLeague, generateGroupTournament,
+  submitMatchResult, submitLeagueResult,
+  submitGroupTournamentResult, editGroupTournamentResult,
+  isGroupStageComplete, buildKnockoutFromGroups, calcGroupConfig,
+} from '../utils/tournament';
 
 export const initialState = {
   currentScreen: SCREENS.HOME,
@@ -16,6 +21,35 @@ export const initialState = {
 
 function buildTournament(meta, teams, seed) {
   const fmt = meta.gameFormat ?? 'tournament';
+
+  // Auto-upgrade league → group_tournament for 7+ teams
+  if (fmt === 'league' && teams.length >= 7) {
+    const bracketData = generateGroupTournament(teams, seed);
+    return {
+      meta: {
+        id: `tournament_${seed}`,
+        schoolLevel: meta.schoolLevel,
+        gender: meta.gender ?? GENDER_TYPES[2],
+        sport: meta.sport ?? SPORT_NAME,
+        gameFormat: 'group_tournament',
+        totalTeams: teams.length,
+        bracketSize: bracketData.knockoutSize,
+        byeCount: 0,
+        groupCount: bracketData.groupCount,
+        advancePerGroup: bracketData.advancePerGroup,
+        knockoutSize: bracketData.knockoutSize,
+        phase: 'group',
+        createdAt: new Date().toISOString(),
+        seed,
+        status: 'in_progress',
+      },
+      teams: [...teams],
+      bracket: { groups: bracketData.groups, knockout: null },
+      notices: [],
+      history: [],
+    };
+  }
+
   const bracketData = fmt === 'league' ? generateLeague(teams) : generateBracket(teams, seed);
   return {
     meta: {
@@ -39,6 +73,27 @@ function buildTournament(meta, teams, seed) {
 }
 
 export function makeSummary(t) {
+  if (t.meta.gameFormat === 'group_tournament') {
+    const allGroupMatches = t.bracket.groups.flatMap(g => g.rounds.flatMap(r => r.matches));
+    const knockoutMatches = t.bracket.knockout?.rounds.flatMap(r => r.matches) ?? [];
+    const allMatches = [...allGroupMatches, ...knockoutMatches];
+    const lastKO = t.bracket.knockout?.rounds[t.bracket.knockout.rounds.length - 1];
+    const winner = lastKO?.matches[0]?.winner ?? null;
+    return {
+      id: t.meta.id,
+      schoolLevel: t.meta.schoolLevel,
+      gender: t.meta.gender ?? '혼성',
+      sport: t.meta.sport,
+      gameFormat: 'group_tournament',
+      totalTeams: t.meta.totalTeams,
+      bracketSize: t.meta.bracketSize,
+      createdAt: t.meta.createdAt,
+      winner,
+      doneCount: allMatches.filter(m => m.status === MATCH_STATUS.DONE).length,
+      totalNonBye: allMatches.filter(m => !m.isBye).length,
+    };
+  }
+
   const lastRound = t.bracket.rounds[t.bracket.rounds.length - 1];
   const winner = lastRound?.matches[0]?.winner ?? null;
   const allMatches = t.bracket.rounds.flatMap(r => r.matches);
@@ -47,6 +102,7 @@ export function makeSummary(t) {
     schoolLevel: t.meta.schoolLevel,
     gender: t.meta.gender ?? '혼성',
     sport: t.meta.sport,
+    gameFormat: t.meta.gameFormat ?? 'tournament',
     totalTeams: t.meta.totalTeams,
     bracketSize: t.meta.bracketSize,
     createdAt: t.meta.createdAt,
@@ -78,9 +134,20 @@ export function reducer(state, action) {
       if (!data) return state;
       let screen = action.payload.targetScreen ?? null;
       if (!screen) {
-        const lastRound = data.bracket.rounds[data.bracket.rounds.length - 1];
-        const hasWinner = lastRound?.matches[0]?.winner;
-        const doneCount = data.bracket.rounds.flatMap(r => r.matches).filter(m => m.status === MATCH_STATUS.DONE).length;
+        const isGroupTournament = data.meta.gameFormat === 'group_tournament';
+        let hasWinner = false;
+        let doneCount = 0;
+        if (isGroupTournament) {
+          const allGroupMatches = data.bracket.groups.flatMap(g => g.rounds.flatMap(r => r.matches));
+          const knockoutMatches = data.bracket.knockout?.rounds.flatMap(r => r.matches) ?? [];
+          doneCount = [...allGroupMatches, ...knockoutMatches].filter(m => m.status === MATCH_STATUS.DONE).length;
+          const lastKO = data.bracket.knockout?.rounds[data.bracket.knockout.rounds.length - 1];
+          hasWinner = !!lastKO?.matches[0]?.winner;
+        } else {
+          const lastRound = data.bracket.rounds[data.bracket.rounds.length - 1];
+          hasWinner = !!lastRound?.matches[0]?.winner;
+          doneCount = data.bracket.rounds.flatMap(r => r.matches).filter(m => m.status === MATCH_STATUS.DONE).length;
+        }
         screen = SCREENS.DRAW;
         if (hasWinner) screen = SCREENS.DASHBOARD;
         else if (doneCount > 0) screen = SCREENS.MATCH_PLAY;
@@ -88,7 +155,13 @@ export function reducer(state, action) {
       return {
         ...state,
         tournament: data,
-        setupMeta: { schoolLevel: data.meta.schoolLevel, gender: data.meta.gender ?? GENDER_TYPES[2], sport: data.meta.sport, gameFormat: data.meta.gameFormat ?? 'tournament' },
+        setupMeta: {
+          schoolLevel: data.meta.schoolLevel,
+          gender: data.meta.gender ?? GENDER_TYPES[2],
+          sport: data.meta.sport,
+          // group_tournament maps back to 'league' in setup UI
+          gameFormat: data.meta.gameFormat === 'group_tournament' ? 'league' : (data.meta.gameFormat ?? 'tournament'),
+        },
         setupTeams: [...data.teams],
         currentScreen: screen,
       };
@@ -140,30 +213,54 @@ export function reducer(state, action) {
         seed: state.tournament.meta.seed,
         reshuffledAt: new Date().toISOString(),
         teams: [...state.tournament.teams],
+        gameFormat: state.tournament.meta.gameFormat,
       };
       const newHistory = [...state.tournament.history, oldEntry].slice(-MAX_HISTORY);
-      const isLeagueReshuffle = state.tournament.meta.gameFormat === 'league';
-      const bracketData = isLeagueReshuffle
-        ? generateLeague(state.tournament.teams)
-        : generateBracket(state.tournament.teams, seed);
-      const updated = {
-        ...state.tournament,
-        meta: { ...state.tournament.meta, seed, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount },
-        bracket: { rounds: bracketData.rounds },
-        history: newHistory,
-      };
+      const isGroupTournament = state.tournament.meta.gameFormat === 'group_tournament';
+      const isLeague = state.tournament.meta.gameFormat === 'league';
+
+      let newBracket, newMeta;
+      if (isGroupTournament) {
+        const bracketData = generateGroupTournament(state.tournament.teams, seed);
+        newBracket = { groups: bracketData.groups, knockout: null };
+        newMeta = { ...state.tournament.meta, seed, bracketSize: bracketData.knockoutSize, byeCount: 0, phase: 'group' };
+      } else if (isLeague) {
+        const bracketData = generateLeague(state.tournament.teams);
+        newBracket = { rounds: bracketData.rounds };
+        newMeta = { ...state.tournament.meta, seed, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount };
+      } else {
+        const bracketData = generateBracket(state.tournament.teams, seed);
+        newBracket = { rounds: bracketData.rounds };
+        newMeta = { ...state.tournament.meta, seed, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount };
+      }
+
+      const updated = { ...state.tournament, meta: newMeta, bracket: newBracket, history: newHistory };
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
-      return {
-        ...state,
-        tournament: updated,
-        tournamentList: newList,
-        ui: { ...state.ui, reshuffleConfirmOpen: false },
-      };
+      return { ...state, tournament: updated, tournamentList: newList, ui: { ...state.ui, reshuffleConfirmOpen: false } };
     }
 
     case ACTIONS.UPDATE_SCHEDULE: {
       if (!state.tournament) return state;
       const { matchId, date, time, venue } = action.payload;
+
+      if (state.tournament.meta.gameFormat === 'group_tournament') {
+        const groups = state.tournament.bracket.groups.map(g => ({
+          ...g,
+          rounds: g.rounds.map(r => ({
+            ...r,
+            matches: r.matches.map(m => m.id === matchId ? { ...m, date, time, venue } : m),
+          })),
+        }));
+        const knockout = state.tournament.bracket.knockout ? {
+          rounds: state.tournament.bracket.knockout.rounds.map(r => ({
+            ...r,
+            matches: r.matches.map(m => m.id === matchId ? { ...m, date, time, venue } : m),
+          })),
+        } : null;
+        const updated = { ...state.tournament, bracket: { groups, knockout } };
+        return { ...state, tournament: updated };
+      }
+
       const rounds = state.tournament.bracket.rounds.map(r => ({
         ...r,
         matches: r.matches.map(m => m.id === matchId ? { ...m, date, time, venue } : m),
@@ -175,11 +272,19 @@ export function reducer(state, action) {
     case ACTIONS.SUBMIT_RESULT: {
       if (!state.tournament) return state;
       const { matchId, homeScore, awayScore } = action.payload;
-      const isLeague = state.tournament.meta.gameFormat === 'league';
-      const rounds = isLeague
-        ? submitLeagueResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore)
-        : submitMatchResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore);
-      const updated = { ...state.tournament, bracket: { rounds } };
+      const fmt = state.tournament.meta.gameFormat;
+
+      let updated;
+      if (fmt === 'group_tournament') {
+        updated = submitGroupTournamentResult(state.tournament, matchId, homeScore, awayScore);
+      } else if (fmt === 'league') {
+        const rounds = submitLeagueResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore);
+        updated = { ...state.tournament, bracket: { rounds } };
+      } else {
+        const rounds = submitMatchResult(state.tournament.bracket.rounds, matchId, homeScore, awayScore);
+        updated = { ...state.tournament, bracket: { rounds } };
+      }
+
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
       return { ...state, tournament: updated, tournamentList: newList };
     }
@@ -187,15 +292,23 @@ export function reducer(state, action) {
     case ACTIONS.EDIT_RESULT: {
       if (!state.tournament) return state;
       const { matchId } = action.payload;
-      const rounds = state.tournament.bracket.rounds.map(r => ({
-        ...r,
-        matches: r.matches.map(m =>
-          m.id === matchId
-            ? { ...m, homeScore: null, awayScore: null, winner: null, status: MATCH_STATUS.SCHEDULED, completedAt: null }
-            : m
-        ),
-      }));
-      const updated = { ...state.tournament, bracket: { rounds } };
+      const fmt = state.tournament.meta.gameFormat;
+
+      let updated;
+      if (fmt === 'group_tournament') {
+        updated = editGroupTournamentResult(state.tournament, matchId);
+      } else {
+        const rounds = state.tournament.bracket.rounds.map(r => ({
+          ...r,
+          matches: r.matches.map(m =>
+            m.id === matchId
+              ? { ...m, homeScore: null, awayScore: null, winner: null, status: MATCH_STATUS.SCHEDULED, completedAt: null }
+              : m
+          ),
+        }));
+        updated = { ...state.tournament, bracket: { rounds } };
+      }
+
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
       return { ...state, tournament: updated, tournamentList: newList };
     }
@@ -229,12 +342,20 @@ export function reducer(state, action) {
 
     case ACTIONS.RESET_BRACKET: {
       if (!state.tournament) return state;
-      const bracketData = generateBracket(state.tournament.teams, state.tournament.meta.seed);
-      const updated = {
-        ...state.tournament,
-        meta: { ...state.tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' },
-        bracket: { rounds: bracketData.rounds },
-      };
+      const isGroupTournament = state.tournament.meta.gameFormat === 'group_tournament';
+
+      let newBracket, newMeta;
+      if (isGroupTournament) {
+        const bracketData = generateGroupTournament(state.tournament.teams, state.tournament.meta.seed);
+        newBracket = { groups: bracketData.groups, knockout: null };
+        newMeta = { ...state.tournament.meta, bracketSize: bracketData.knockoutSize, byeCount: 0, phase: 'group', status: 'in_progress' };
+      } else {
+        const bracketData = generateBracket(state.tournament.teams, state.tournament.meta.seed);
+        newBracket = { rounds: bracketData.rounds };
+        newMeta = { ...state.tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' };
+      }
+
+      const updated = { ...state.tournament, meta: newMeta, bracket: newBracket };
       const newList = state.tournamentList.map(t => t.id === updated.meta.id ? makeSummary(updated) : t);
       return { ...state, tournament: updated, tournamentList: newList };
     }
