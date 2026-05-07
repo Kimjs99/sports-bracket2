@@ -9,7 +9,7 @@ import { ACTIONS } from '../store/actions';
 import { SCREENS, MATCH_STATUS, SPORT_EMOJI } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
 import { loadTournament, saveTournament } from '../utils/storage';
-import { generateBracket, generateGroupTournament } from '../utils/tournament';
+import { generateBracket, generateGroupTournament, calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
 import HelpModal from './ui/HelpModal';
 import ConfirmDialog from './ui/ConfirmDialog';
@@ -52,6 +52,111 @@ function StatCard({ label, value, color }) {
     <div className={`rounded-xl p-3 text-center ${colors[color]}`}>
       <div className="text-xl font-bold">{value}</div>
       <div className="text-xs mt-0.5 opacity-75">{label}</div>
+    </div>
+  );
+}
+
+// ─── GroupDashboardView ────────────────────────────────────────────────────────
+
+function GroupCard({ group, advancePerGroup }) {
+  const standings = calcLeagueStandings(group.teams, group.rounds);
+  const completedMatches = group.rounds
+    .flatMap(r => r.matches.map(m => ({ ...m, roundName: r.name })))
+    .filter(m => m.status === MATCH_STATUS.DONE && !m.isBye);
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
+        <span className="font-bold text-sm text-gray-800 dark:text-gray-100">{group.name}</span>
+        <span className="text-xs text-gray-400 dark:text-gray-500">{group.teams.length}팀</span>
+      </div>
+
+      {/* Standings */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500">
+              <th className="px-3 py-1.5 text-left font-medium">팀</th>
+              <th className="px-2 py-1.5 text-center font-medium">경기</th>
+              <th className="px-2 py-1.5 text-center font-medium">승</th>
+              <th className="px-2 py-1.5 text-center font-medium">무</th>
+              <th className="px-2 py-1.5 text-center font-medium">패</th>
+              <th className="px-2 py-1.5 text-center font-medium">득실</th>
+              <th className="px-2 py-1.5 text-center font-medium text-blue-600 dark:text-blue-400">승점</th>
+            </tr>
+          </thead>
+          <tbody>
+            {standings.map((row, i) => {
+              const isAdvancing = i < advancePerGroup;
+              return (
+                <tr key={row.team}
+                  className={`border-b border-gray-50 dark:border-gray-700/50 last:border-0
+                    ${isAdvancing ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                  <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+                    {isAdvancing && <span className="text-blue-500 text-[10px] font-bold">▲</span>}
+                    <span className="truncate max-w-[80px]">{row.team}</span>
+                  </td>
+                  <td className="px-2 py-2 text-center text-gray-500 dark:text-gray-400">{row.played}</td>
+                  <td className="px-2 py-2 text-center text-gray-700 dark:text-gray-300">{row.win}</td>
+                  <td className="px-2 py-2 text-center text-gray-500 dark:text-gray-400">{row.draw}</td>
+                  <td className="px-2 py-2 text-center text-gray-500 dark:text-gray-400">{row.loss}</td>
+                  <td className="px-2 py-2 text-center text-gray-500 dark:text-gray-400">
+                    {row.gf - row.ga > 0 ? `+${row.gf - row.ga}` : row.gf - row.ga}
+                  </td>
+                  <td className="px-2 py-2 text-center font-bold text-blue-600 dark:text-blue-400">{row.pts}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Completed match results */}
+      {completedMatches.length > 0 && (
+        <div className="border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-50 dark:divide-gray-700/50">
+          {completedMatches.map(m => (
+            <div key={m.id} className="px-3 py-2 flex items-center justify-between text-xs">
+              <span className={`flex-1 text-right font-medium truncate ${m.winner === m.home ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {m.home}
+              </span>
+              <span className="mx-2 font-bold text-gray-700 dark:text-gray-200 shrink-0 tabular-nums">
+                {m.homeScore} : {m.awayScore}
+              </span>
+              <span className={`flex-1 font-medium truncate ${m.winner === m.away ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {m.away}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GroupDashboardView({ bracket, meta }) {
+  const { groups, knockout } = bracket;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {groups.map(g => (
+          <GroupCard key={g.id} group={g} advancePerGroup={meta.advancePerGroup ?? 2} />
+        ))}
+      </div>
+      {knockout && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+            <Trophy size={13} className="text-amber-500" />
+            <span className="font-bold text-sm text-gray-800 dark:text-gray-100">{meta.knockoutSize}강 본선 대진</span>
+          </div>
+          <BracketTree rounds={knockout.rounds} />
+        </div>
+      )}
+      {!knockout && (
+        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-sm text-blue-700 dark:text-blue-400">
+          <Layers size={14} className="shrink-0" />
+          조별 리그 진행 중 — 모든 경기 완료 후 {meta.knockoutSize}강 대진이 자동 생성됩니다.
+        </div>
+      )}
     </div>
   );
 }
@@ -541,7 +646,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
   const tabs = [
     { id: 'overview', label: '현황' },
     { id: 'school', label: '학교 조회' },
-    { id: 'bracket', label: '대진표' },
+    { id: 'bracket', label: isGroupTournament ? '조별 현황' : '대진표' },
     { id: 'feed', label: `결과 피드 (${doneMatchesFeed.length})` },
     { id: 'notices', label: `공지 (${notices.length})`, adminOnly: true },
   ];
@@ -800,21 +905,13 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
 
         {/* 대진표 */}
         {activeTab === 'bracket' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-            {isGroupTournament ? (
-              bracket.knockout ? (
-                <BracketTree rounds={bracket.knockout.rounds} />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-                  <Layers size={32} className="opacity-30" />
-                  <p className="text-sm">조별 리그 진행 중입니다</p>
-                  <p className="text-xs">모든 조별 경기 완료 후 토너먼트 대진이 생성됩니다</p>
-                </div>
-              )
-            ) : (
+          isGroupTournament ? (
+            <GroupDashboardView bracket={bracket} meta={meta} />
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
               <BracketTree rounds={rounds} />
-            )}
-          </div>
+            </div>
+          )
         )}
 
         {/* 결과 피드 */}
