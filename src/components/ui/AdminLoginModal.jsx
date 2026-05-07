@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { X, Eye, EyeOff, ShieldCheck, KeyRound, LogOut, User, Loader } from 'lucide-react';
 import { useAdmin } from '../../contexts/AdminContext';
-import { hasAdmin } from '../../utils/adminStorage';
 
 export default function AdminLoginModal() {
   const { isLoggedIn, username, login, logout, createAccount, setModalOpen, onSuccess } = useAdmin();
 
-  const [isCreating, setIsCreating] = useState(!hasAdmin());
+  const [isCreating, setIsCreating] = useState(false);
   const [uname, setUname] = useState('');
   const [p, setP] = useState('');
   const [p2, setP2] = useState('');
@@ -91,11 +90,11 @@ export default function AdminLoginModal() {
             </div>
           ) : (
             <div className="space-y-3">
-              {isCreating && (
+              {isCreating ? (
                 <p className="text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg px-3 py-2">
                   처음 사용하시는 경우 관리자 계정을 생성해주세요.
                 </p>
-              )}
+              ) : null}
 
               <div>
                 <label className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1 block">아이디</label>
@@ -161,6 +160,14 @@ export default function AdminLoginModal() {
               >
                 {loading && <Loader size={14} className="animate-spin" />}
                 {isCreating ? '계정 만들기' : '로그인'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setIsCreating(v => !v); setError(''); setP(''); setP2(''); }}
+                className="w-full text-xs text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 py-1 transition-colors"
+              >
+                {isCreating ? '이미 계정이 있으신가요? 로그인' : '처음 사용하신다면 계정 만들기'}
               </button>
             </div>
           )}
