@@ -1,4 +1,4 @@
-import { X, UserPlus, LogIn, Trophy, Calendar, Swords, Download, LogOut, AlertTriangle, Settings } from 'lucide-react';
+import { X, UserPlus, LogIn, Trophy, Calendar, Swords, Download, LogOut, AlertTriangle, Share2 } from 'lucide-react';
 
 const SECTIONS = [
   {
@@ -43,6 +43,12 @@ const SECTIONS = [
         <ol className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300 list-decimal list-inside">
           <li>홈 화면 <b>"+ 새 대진 생성"</b> 버튼을 누릅니다.</li>
           <li>학교급 / 성별 / 종목 / 경기 방식을 선택합니다.</li>
+          <li><b>학년</b>을 선택합니다. <span className="text-gray-500 dark:text-gray-400 text-xs">(선택 사항 — 학년별 경기가 아닌 경우 "구분 없음" 유지)</span>
+            <ul className="mt-1 ml-4 space-y-0.5 text-xs text-gray-500 dark:text-gray-400 list-none">
+              <li>• 초등: 1~6학년 / 중등·고등: 1~3학년</li>
+              <li>• 선택한 학년은 대진표 제목과 파일명에 표시됩니다.</li>
+            </ul>
+          </li>
           <li>팀 이름을 직접 입력하거나 CSV·Excel 파일을 업로드합니다.</li>
           <li><b>"대진 생성"</b>을 누릅니다.</li>
         </ol>
@@ -120,6 +126,27 @@ const SECTIONS = [
         <li>• 대진 화면 <b>"대진표"</b> 탭에서 브라켓 또는 순위표를 확인합니다.</li>
         <li>• 우상단 <b>다운로드</b> 버튼으로 PNG / JPG / PDF 형식으로 저장할 수 있습니다.</li>
       </ul>
+    ),
+  },
+  {
+    id: 'guest',
+    icon: Share2,
+    color: 'text-teal-600 dark:text-teal-400',
+    title: '게스트 URL — 외부 공유',
+    content: (
+      <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+        <p>로그인 없이 대진 현황을 열람할 수 있는 링크를 공유할 수 있습니다.</p>
+        <ol className="space-y-1.5 list-decimal list-inside">
+          <li>홈 화면 상단 <b>"게스트 URL"</b> 버튼을 누르면 링크가 클립보드에 복사됩니다.</li>
+          <li>복사된 링크를 학생·학부모·교직원에게 공유하세요.</li>
+          <li>링크를 열면 해당 학교의 대진 현황을 로그인 없이 열람할 수 있습니다.</li>
+        </ol>
+        <ul className="mt-1 ml-1 space-y-1 text-xs text-gray-500 dark:text-gray-400 list-none">
+          <li>• 게스트는 <b>열람만</b> 가능합니다. 결과 입력·대진 수정은 불가합니다.</li>
+          <li>• 링크 형식: <span className="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">…/?view=학교식별자</span></li>
+          <li>• 게스트 화면 우상단 <b>"관리자"</b> 버튼으로 로그인 화면으로 이동할 수 있습니다.</li>
+        </ul>
+      </div>
     ),
   },
   {
