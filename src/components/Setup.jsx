@@ -34,7 +34,7 @@ async function parseFile(file) {
 export default function Setup() {
   const { state, dispatch } = useContext(AppContext);
   const { setupMeta, setupTeams, ui } = state;
-  const { requireAdmin, isLoggedIn } = useAdmin();
+  const { requireAdmin, isLoggedIn, orgId } = useAdmin();
   const [newTeamName, setNewTeamName] = useState('');
   const [importResult, setImportResult] = useState(null);
   const fileInputRef = useRef(null);
@@ -81,7 +81,7 @@ export default function Setup() {
       dispatch({ type: ACTIONS.SET_UI_ERROR, payload: { message: `최소 ${MIN_TEAMS}팀 이상 입력해야 합니다.` } });
       return;
     }
-    requireAdmin(() => dispatch({ type: ACTIONS.GENERATE_BRACKET, payload: { seed: Date.now() } }));
+    requireAdmin(() => dispatch({ type: ACTIONS.GENERATE_BRACKET, payload: { seed: Date.now(), orgId } }));
   }
 
   function downloadTemplate() {

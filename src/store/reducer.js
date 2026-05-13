@@ -33,6 +33,7 @@ function buildTournament(meta, teams, seed) {
         sport: meta.sport ?? SPORT_NAME,
         gameFormat: 'group_tournament',
         grade: meta.grade ?? null,
+        orgId: meta.orgId ?? null,
         totalTeams: teams.length,
         bracketSize: bracketData.knockoutSize,
         byeCount: 0,
@@ -60,6 +61,7 @@ function buildTournament(meta, teams, seed) {
       sport: meta.sport ?? SPORT_NAME,
       gameFormat: fmt,
       grade: meta.grade ?? null,
+      orgId: meta.orgId ?? null,
       totalTeams: teams.length,
       bracketSize: bracketData.bracketSize,
       byeCount: bracketData.byeCount,
@@ -201,7 +203,8 @@ export function reducer(state, action) {
 
     case ACTIONS.GENERATE_BRACKET: {
       const seed = action.payload?.seed ?? Date.now();
-      const tournament = buildTournament(state.setupMeta, state.setupTeams, seed);
+      const metaWithOrg = { ...state.setupMeta, orgId: action.payload?.orgId ?? null };
+      const tournament = buildTournament(metaWithOrg, state.setupTeams, seed);
       return {
         ...state,
         tournament,
