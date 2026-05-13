@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.0] - 2026-05-13
+
+### ✨ Features
+- 게스트 URL 열람 기능 추가 (`3da6a3b`) — `?view=<slug>` URL로 비로그인 공개 대진 열람
+  - 관리자 홈 화면에 "게스트 URL" 복사 버튼 (Share2 아이콘) 추가
+  - GuestView: 학교급 탭·종목 카드·대진표/순위표 전체 공개 대시보드
+  - 관리자 접근 버튼으로 로그인 화면으로 전환 가능
+  - Supabase `get_org_tournaments` RPC(SECURITY DEFINER)로 org별 격리 유지
+- 대진 생성 시 학년 선택 옵션 추가 (`0898573`) — 선택 사항, 기본값 "구분 없음"
+  - 초등 1~6학년, 중등/고등 1~3학년
+  - 학교급 변경 시 학년 자동 초기화
+  - 선택한 학년이 대진표 헤더(Home·Draw·GuestView)·다운로드 파일명에 표시
+
+### 🐛 Bug Fixes
+- 대진표 다운로드 한글/스타일 깨짐 완전 수정 (`9724748`) — `cloneWithComputedStyles()`로 전체 DOM 인라인 스타일 복사, Tailwind v4 CSS 변수 미해석 문제 근본 해결
+- 게스트 뷰 대진 미표시 수정 (`0a7357b`) — 대진 생성 시 `org_id`를 meta에 저장, `GENERATE_BRACKET` 액션에 `orgId` 전달
+
+---
+
 ## [v0.5.0] - 2026-05-13
 
 ### ✨ Features
