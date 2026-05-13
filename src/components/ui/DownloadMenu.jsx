@@ -21,10 +21,17 @@ async function captureBlob(element, type, quality) {
   const bgcolor = isDark ? '#1e293b' : '#ffffff';
   const scale = 2;
 
-  if (type === 'image/jpeg') {
-    return domtoimage.toBlob(target, { scale, bgcolor, type: 'image/jpeg', quality: quality ?? 0.92 });
-  }
-  return domtoimage.toBlob(target, { scale, bgcolor });
+  // Wait for all fonts (including Noto Sans KR) to be fully loaded
+  await document.fonts.ready;
+
+  const opts = type === 'image/jpeg'
+    ? { scale, bgcolor, type: 'image/jpeg', quality: quality ?? 0.92 }
+    : { scale, bgcolor };
+
+  // First call warms up dom-to-image's internal CSS/font cache
+  try { await domtoimage.toBlob(target, opts); } catch { /* ignore warmup errors */ }
+  // Second call renders with the now-cached resources
+  return domtoimage.toBlob(target, opts);
 }
 
 export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
