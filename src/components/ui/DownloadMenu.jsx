@@ -14,6 +14,29 @@ function triggerDownload(url, filename) {
   }, 200);
 }
 
+// Deep-clone an element and inline every computed style property.
+// This is necessary because dom-to-image renders via SVG foreignObject,
+// which cannot resolve Tailwind v4 CSS variables (oklch, --tw-*) correctly.
+function cloneWithComputedStyles(source) {
+  const dest = source.cloneNode(false);
+
+  const cs = window.getComputedStyle(source);
+  for (let i = 0; i < cs.length; i++) {
+    const prop = cs[i];
+    try { dest.style.setProperty(prop, cs.getPropertyValue(prop)); } catch { /* read-only props */ }
+  }
+
+  source.childNodes.forEach(child => {
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      dest.appendChild(cloneWithComputedStyles(child));
+    } else {
+      dest.appendChild(child.cloneNode(true));
+    }
+  });
+
+  return dest;
+}
+
 async function captureBlob(element, type, quality) {
   const { default: domtoimage } = await import('dom-to-image-more');
   const target = element.querySelector('.bracket-container') ?? element;
@@ -21,17 +44,25 @@ async function captureBlob(element, type, quality) {
   const bgcolor = isDark ? '#1e293b' : '#ffffff';
   const scale = 2;
 
-  // Wait for all fonts (including Noto Sans KR) to be fully loaded
   await document.fonts.ready;
 
-  const opts = type === 'image/jpeg'
-    ? { scale, bgcolor, type: 'image/jpeg', quality: quality ?? 0.92 }
-    : { scale, bgcolor };
+  // Build a fully-styled clone so dom-to-image needs no CSS fetching
+  const clone = cloneWithComputedStyles(target);
+  Object.assign(clone.style, {
+    position: 'fixed',
+    top: '-99999px',
+    left: '-99999px',
+    visibility: 'hidden',
+  });
+  document.body.appendChild(clone);
 
-  // First call warms up dom-to-image's internal CSS/font cache
-  try { await domtoimage.toBlob(target, opts); } catch { /* ignore warmup errors */ }
-  // Second call renders with the now-cached resources
-  return domtoimage.toBlob(target, opts);
+  try {
+    const opts = { scale, bgcolor };
+    if (type === 'image/jpeg') { opts.type = 'image/jpeg'; opts.quality = quality ?? 0.92; }
+    return await domtoimage.toBlob(clone, opts);
+  } finally {
+    document.body.removeChild(clone);
+  }
 }
 
 export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
