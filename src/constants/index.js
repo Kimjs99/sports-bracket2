@@ -1,5 +1,10 @@
 export const SCHOOL_LEVELS = ['초등', '중등', '고등'];
 export const GENDER_TYPES = ['남성', '여성', '혼성'];
+export const GRADE_OPTIONS = {
+  '초등': ['1학년', '2학년', '3학년', '4학년', '5학년', '6학년'],
+  '중등': ['1학년', '2학년', '3학년'],
+  '고등': ['1학년', '2학년', '3학년'],
+};
 export const SPORT_NAME = '농구'; // legacy
 export const STORAGE_KEY = 'school_tournament_data';
 

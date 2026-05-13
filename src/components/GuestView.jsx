@@ -96,6 +96,7 @@ function GuestTournamentView({ tournament, onBack }) {
   const [tab, setTab] = useState('bracket');
 
   const genderLabel = meta.gender && meta.gender !== '혼성' ? `${meta.gender} ` : '';
+  const gradeLabel = meta.grade ? ` ${meta.grade}` : '';
   const formatLabel = isGroup ? '조별리그' : isLeague ? '리그전' : '토너먼트';
   const rounds = isGroup ? [] : (bracket.rounds ?? []);
   const doneMatches = isGroup
@@ -117,7 +118,7 @@ function GuestTournamentView({ tournament, onBack }) {
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="max-w-4xl mx-auto">
           <h2 className="font-bold text-gray-900 dark:text-gray-100">
-            {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport} {formatLabel}
+            {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport}{gradeLabel} {formatLabel}
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             {meta.schoolLevel}부 · {meta.totalTeams}팀

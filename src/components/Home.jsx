@@ -654,6 +654,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
 
   const formatLabel = meta.gameFormat === 'league' ? '리그전' : meta.gameFormat === 'group_tournament' ? '조별리그' : '토너먼트';
   const genderLabel = meta.gender && meta.gender !== '혼성' ? `${meta.gender} ` : '';
+  const gradeLabel = meta.grade ? ` ${meta.grade}` : '';
 
   return (
     <div className="space-y-0">
@@ -677,7 +678,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
               <div className="flex items-center gap-2 mb-1">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${LEVEL_COLOR[level]?.badge}`}>{level}부</span>
                 <span className="font-bold text-gray-900 dark:text-gray-100">
-                  {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport} {formatLabel}
+                  {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport}{gradeLabel} {formatLabel}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">

@@ -3,7 +3,7 @@ import { Plus, Trash2, Shuffle, AlertCircle, Lock, ChevronLeft, Upload, Download
 import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { useAdmin } from '../contexts/AdminContext';
-import { SCHOOL_LEVELS, GENDER_TYPES, SPORTS, SPORT_EMOJI, GAME_FORMATS, MIN_TEAMS, MAX_TEAMS, MAX_TEAM_NAME_LENGTH } from '../constants';
+import { SCHOOL_LEVELS, GENDER_TYPES, SPORTS, SPORT_EMOJI, GAME_FORMATS, GRADE_OPTIONS, MIN_TEAMS, MAX_TEAMS, MAX_TEAM_NAME_LENGTH } from '../constants';
 
 function parseCSVText(text) {
   return text
@@ -155,7 +155,7 @@ export default function Setup() {
             {SCHOOL_LEVELS.map(level => (
               <button
                 key={level}
-                onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { schoolLevel: level } })}
+                onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { schoolLevel: level, grade: null } })}
                 className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all
                   ${setupMeta.schoolLevel === level
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900'
@@ -180,6 +180,38 @@ export default function Setup() {
                   }`}
               >
                 {gender}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Grade (Optional) */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            학년 <span className="text-gray-400 dark:text-gray-500 font-normal text-xs">(선택)</span>
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { grade: null } })}
+              className={`px-3 py-2 rounded-xl text-sm font-medium transition-all
+                ${setupMeta.grade === null
+                  ? 'bg-gray-600 text-white shadow-md'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+            >
+              구분 없음
+            </button>
+            {(GRADE_OPTIONS[setupMeta.schoolLevel] ?? []).map(grade => (
+              <button
+                key={grade}
+                onClick={() => dispatch({ type: ACTIONS.SET_META, payload: { grade } })}
+                className={`px-3 py-2 rounded-xl text-sm font-medium transition-all
+                  ${setupMeta.grade === grade
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+              >
+                {grade}
               </button>
             ))}
           </div>
