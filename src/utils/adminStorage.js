@@ -1,42 +1,68 @@
 import { supabase } from '../lib/supabase';
 
-// Single admin account — uses a fixed synthetic email internally.
-// Username is a display label stored in Supabase user_metadata.
-const ADMIN_EMAIL = 'admin@school-bracket.app';
-export const ADMIN_CREATED_KEY = 'tournament_admin_created_v1'; // value = username string
+// Org-scoped synthetic email — keeps auth simple without exposing real emails
+const orgEmail = slug => `admin+${slug}@school-bracket.app`;
 
-export function hasAdmin() {
-  return !!localStorage.getItem(ADMIN_CREATED_KEY);
+// ── Organizations ──────────────────────────────────────────────────────────────
+
+export async function loadOrganizations() {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('id, name, slug, created_at')
+      .order('name');
+    if (error) return [];
+    return data ?? [];
+  } catch {
+    return [];
+  }
 }
 
-export async function saveAdmin(username, password) {
+export async function registerOrg(name, slug, password) {
+  const email = orgEmail(slug);
   const { data, error } = await supabase.auth.signUp({
-    email: ADMIN_EMAIL,
+    email,
     password,
-    options: { data: { username } },
+    options: { data: { org_name: name, org_slug: slug } },
   });
-  if (error) throw error;
-  // session is null when account already exists (email confirm disabled + duplicate)
+  if (error) {
+    if (error.message?.toLowerCase().includes('already registered')) throw new Error('ALREADY_EXISTS');
+    throw error;
+  }
   if (!data.session) throw new Error('ALREADY_EXISTS');
-  localStorage.setItem(ADMIN_CREATED_KEY, username);
+
+  const { error: orgErr } = await supabase.from('organizations').insert({
+    name,
+    slug,
+    user_id: data.user.id,
+  });
+  if (orgErr) throw orgErr;
+
+  return { user: data.user, org: { id: null, name, slug } };
 }
 
-export async function verifyAdmin(password) {
+export async function loginOrg(slug, password) {
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: ADMIN_EMAIL,
+    email: orgEmail(slug),
     password,
   });
-  if (error || !data.session) return false;
-  const uname = data.user?.user_metadata?.username
-    ?? localStorage.getItem(ADMIN_CREATED_KEY)
-    ?? 'admin';
-  localStorage.setItem(ADMIN_CREATED_KEY, uname);
-  return true;
+  if (error || !data.session) return null;
+
+  // Fetch org record to get id and canonical name
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('id, name, slug')
+    .eq('user_id', data.user.id)
+    .single();
+
+  return {
+    user: data.user,
+    org: org ?? { id: null, name: data.user.user_metadata?.org_name ?? slug, slug },
+  };
 }
 
 export async function signOutAdmin() {
   await supabase.auth.signOut();
-  // keep ADMIN_CREATED_KEY so hasAdmin() stays true on same device
 }
 
 export function subscribeAuth(callback) {

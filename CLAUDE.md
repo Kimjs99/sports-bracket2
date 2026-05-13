@@ -47,7 +47,7 @@ localStorage keys: `tournament_ids_v2` (ID array), `tournament_data_{id}` (full 
 
 ### Admin auth (`src/utils/adminStorage.js`)
 
-Uses **Supabase Auth** with a fixed synthetic email (`admin@school-bracket.app`) — single admin account only. Username is a display label stored in `user_metadata`.
+Uses **Supabase Auth** with a fixed synthetic email (`admin@school-bracket.app`) — **globally single admin account only** (attempting to create a second account returns `'ALREADY_EXISTS'`). Username is a display label stored in `user_metadata`.
 
 - `hasAdmin()` — sync, checks `tournament_admin_created_v1` localStorage key
 - `saveAdmin(username, password)` — `supabase.auth.signUp`; throws `'ALREADY_EXISTS'` if account exists
@@ -56,6 +56,10 @@ Uses **Supabase Auth** with a fixed synthetic email (`admin@school-bracket.app`)
 - `subscribeAuth(callback)` — wraps `onAuthStateChange`; used in `AdminContext` to restore session on mount
 
 **`requireAdmin(action)`** pattern: if already logged in → executes `action()` immediately; if not → stores it as `pending`, opens modal → `onSuccess()` closes modal and runs the stored action.
+
+**`AdminLoginModal`** always defaults to the **login form** (`useState(false)`) regardless of the device's localStorage state. A toggle link at the bottom switches between login and account-creation modes. This ensures other devices (without the `tournament_admin_created_v1` localStorage key) can still log in.
+
+**Single-tenant architecture:** The Supabase `tournaments` table has no `user_id`/`org_id` column — SELECT is public (anon) and returns all rows. All tournaments are visible to all users regardless of who created them. Multi-tenant isolation (per-organization data separation) is a planned future enhancement requiring: `org_id` column on the table, RLS policies scoped to the owner, and multi-account admin support.
 
 ### Tournament data shape
 

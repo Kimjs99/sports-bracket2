@@ -35,6 +35,7 @@ export const MATCH_STATUS = {
 };
 
 export const SCREENS = {
+  ORG_SELECT: 'org_select',
   HOME: 'home',
   SETUP: 'setup',
   DRAW: 'draw',

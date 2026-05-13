@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.0] - 2026-05-13
+
+### ✨ Features
+- 멀티 테넌트 지원: 학교/기관별 독립 계정 및 데이터 격리
+- 홈 화면 조직 선택 — 등록된 학교 목록 검색·선택 후 로그인
+- 새 학교/기관 셀프 등록 (학교명·식별자·비밀번호)
+- 완전 비공개 모드 — 로그인 없이는 대진 데이터 열람 불가
+
+### 🔒 Security
+- Supabase RLS `user_id = auth.uid()` 기반 소유자 격리
+- `organizations` 테이블 추가 (slug·name·user_id)
+- `tournaments` 테이블에 `user_id`·`org_id` 컬럼 추가
+- 기존 공개 SELECT 정책(`anyone can read`) 제거
+
+### ♻️ Refactoring
+- `adminStorage.js` 재작성 — 단일 고정 계정 → 조직별 독립 계정
+- `storage.js` — 인증 후 Supabase 결과 우선 신뢰 (localStorage fallback 차단)
+- `AdminContext` — `orgSlug`·`orgId` 상태 추가
+- `AdminLoginModal` — 로그아웃 전용으로 단순화
+- `GlobalBar` — 미로그인 시 관리자 버튼 숨김
+
+### 🆕 New Files
+- `src/components/OrgSelectScreen.jsx` — 조직 선택·등록·로그인 통합 화면
+- `SUPABASE_MIGRATION.sql` — DB 스키마 변경 명세
+
+---
+
 ## [v0.3.0] - 2026-05-07
 
 ### ✨ Features

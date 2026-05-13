@@ -37,33 +37,41 @@ function lsClear() {
   lsSetIds([]);
 }
 
+// Wipe localStorage tournament cache (call on logout or org switch)
+export function clearLocalCache() {
+  lsClear();
+}
+
 // ── Supabase (secondary — best-effort cross-device sync) ──────────────────────
 
 async function sbSave(data) {
   try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     await supabase.from('tournaments').upsert({
       id: data.meta.id,
       school_level: data.meta.schoolLevel,
+      org_id: data.meta.orgId ?? null,
+      user_id: session.user.id,
       data,
       created_at: data.meta.createdAt,
     });
-  } catch { /* ignore — localStorage is authoritative */ }
+  } catch { /* localStorage is authoritative */ }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function saveTournament(data) {
-  lsSave(data);     // always save locally first
-  sbSave(data);     // best-effort remote sync (fire-and-forget)
+  lsSave(data);
+  sbSave(data);
 }
 
 export async function loadTournament(id) {
-  // Try Supabase for freshest cross-device data
   try {
     const { data, error } = await supabase
       .from('tournaments').select('data').eq('id', id).single();
     if (!error && data?.data) {
-      lsSave(data.data); // keep localStorage in sync
+      lsSave(data.data);
       return data.data;
     }
   } catch { /* fallback */ }
@@ -71,16 +79,27 @@ export async function loadTournament(id) {
 }
 
 export async function loadAllTournaments() {
-  // Try Supabase first (cross-device data)
+  // Supabase RLS returns only current user's tournaments
   try {
-    const { data, error } = await supabase
-      .from('tournaments').select('data').order('created_at', { ascending: false });
-    if (!error && data && data.length > 0) {
-      data.forEach(row => row.data && lsSave(row.data)); // sync to localStorage
-      return data.map(row => row.data).filter(Boolean);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const { data, error } = await supabase
+        .from('tournaments').select('data').order('created_at', { ascending: false });
+      if (!error) {
+        // Authenticated: always trust Supabase result (even empty array).
+        // Do NOT fall back to localStorage — it may contain stale data from a
+        // previous org session and RLS already guarantees correct isolation.
+        const list = (data ?? []).map(row => row.data).filter(Boolean);
+        lsClear();                          // sync: purge any stale local cache
+        list.forEach(t => lsSave(t));       // repopulate with fresh org data
+        return list;
+      }
+      // Supabase error (network etc.) → use localStorage as emergency fallback
+      return lsLoadAll();
     }
-  } catch { /* fallback */ }
-  return lsLoadAll();
+  } catch { /* Supabase unavailable */ }
+  // Not authenticated → fully private, return nothing
+  return [];
 }
 
 export async function deleteTournament(id) {

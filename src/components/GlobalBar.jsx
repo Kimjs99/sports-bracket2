@@ -1,4 +1,4 @@
-import { Sun, Moon, Monitor, Lock, ShieldCheck } from 'lucide-react';
+import { Sun, Moon, Monitor, ShieldCheck } from 'lucide-react';
 import { useAdmin } from '../contexts/AdminContext';
 
 const THEMES = ['light', 'dark', 'auto'];
@@ -26,19 +26,17 @@ export default function GlobalBar({ theme, setTheme }) {
         <span className="hidden sm:inline">{LABELS[theme]}</span>
       </button>
 
-      {/* Admin button */}
-      <button
-        onClick={openModal}
-        title={isLoggedIn ? `관리자: ${username}` : '관리자 로그인'}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-md border text-xs font-medium transition-colors
-          ${isLoggedIn
-            ? 'bg-green-50 dark:bg-green-900/40 border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/60'
-            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-          }`}
-      >
-        {isLoggedIn ? <ShieldCheck size={13} /> : <Lock size={13} />}
-        <span className="hidden sm:inline">{isLoggedIn ? username : '관리자'}</span>
-      </button>
+      {/* Admin button — only shown when logged in */}
+      {isLoggedIn && (
+        <button
+          onClick={openModal}
+          title={`관리자: ${username}`}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-md border text-xs font-medium transition-colors bg-green-50 dark:bg-green-900/40 border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/60"
+        >
+          <ShieldCheck size={13} />
+          <span className="hidden sm:inline">{username}</span>
+        </button>
+      )}
     </div>
   );
 }

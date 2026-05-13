@@ -10,6 +10,7 @@ import Setup from './components/Setup';
 import Draw from './components/Draw';
 import MatchPlay from './components/MatchPlay';
 import Dashboard from './components/Dashboard';
+import OrgSelectScreen from './components/OrgSelectScreen';
 import AdminLoginModal from './components/ui/AdminLoginModal';
 import GlobalBar from './components/GlobalBar';
 
@@ -17,31 +18,41 @@ export const AppContext = createContext(null);
 
 function AppInner({ theme, setTheme }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { modalOpen } = useAdmin();
+  const { isLoggedIn, modalOpen } = useAdmin();
   const [importedLevel, setImportedLevel] = useState(null);
   const tournamentRef = useRef(null);
 
-  // 앱 초기화: Supabase에서 대진 목록 로드
-  useEffect(() => {
-    async function init() {
-      const shared = readShareParam();
-      if (shared?.meta?.id) {
-        await saveTournament(shared);
-        clearShareParam();
-        setImportedLevel(shared.meta.schoolLevel ?? null);
-        setTimeout(() => setImportedLevel(null), 4000);
-      }
-
-      const all = await loadAllTournaments();
-      dispatch({
-        type: ACTIONS.LOAD_TOURNAMENT_LIST,
-        payload: { list: all.map(makeSummary) },
-      });
-    }
-    init();
+  // 로그인 후 대진 목록 로드
+  const loadTournamentList = useCallback(async () => {
+    const all = await loadAllTournaments();
+    dispatch({
+      type: ACTIONS.LOAD_TOURNAMENT_LIST,
+      payload: { list: all.map(makeSummary) },
+    });
   }, []);
 
-  // state.tournament 변경 시 Supabase에 저장 (GENERATE_BRACKET, RESHUFFLE, SUBMIT_RESULT 등)
+  // 로그인 상태 변경 시 대진 목록 갱신
+  useEffect(() => {
+    if (isLoggedIn) {
+      async function init() {
+        const shared = readShareParam();
+        if (shared?.meta?.id) {
+          await saveTournament(shared);
+          clearShareParam();
+          setImportedLevel(shared.meta.schoolLevel ?? null);
+          setTimeout(() => setImportedLevel(null), 4000);
+        }
+        await loadTournamentList();
+        dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.HOME } });
+      }
+      init();
+    } else {
+      // 로그아웃 시 홈으로 리셋 (다음 로그인을 위해 초기 상태 유지)
+      dispatch({ type: ACTIONS.RESET_ALL_TOURNAMENTS });
+    }
+  }, [isLoggedIn, loadTournamentList]);
+
+  // state.tournament 변경 시 저장
   useEffect(() => {
     if (state.tournament && state.tournament !== tournamentRef.current) {
       saveTournament(state.tournament).catch(console.error);
@@ -49,7 +60,6 @@ function AppInner({ theme, setTheme }) {
     tournamentRef.current = state.tournament;
   }, [state.tournament]);
 
-  // 비동기 작업이 필요한 액션을 처리하는 asyncDispatch
   const asyncDispatch = useCallback(async (action) => {
     switch (action.type) {
       case ACTIONS.LOAD_TOURNAMENT_LIST: {
@@ -81,6 +91,17 @@ function AppInner({ theme, setTheme }) {
         dispatch(action);
     }
   }, []);
+
+  // 로그인 전: org 선택 화면
+  if (!isLoggedIn) {
+    return (
+      <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+        <GlobalBar theme={theme} setTheme={setTheme} />
+        <OrgSelectScreen onOrgLogin={() => {}} />
+        {modalOpen && <AdminLoginModal />}
+      </AppContext.Provider>
+    );
+  }
 
   const screen = state.currentScreen;
 
