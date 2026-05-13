@@ -12,7 +12,7 @@ import { useAdmin } from '../contexts/AdminContext';
 import { loadTournament, saveTournament } from '../utils/storage';
 import { generateBracket, generateGroupTournament, calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
-import HelpModal from './ui/HelpModal';
+import GuideModal from './ui/GuideModal';
 import ConfirmDialog from './ui/ConfirmDialog';
 import { buildShareUrl } from '../utils/shareUtils';
 
@@ -1046,7 +1046,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <GuideModal onClose={() => setHelpOpen(false)} />}
 
       {/* App header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-10">
