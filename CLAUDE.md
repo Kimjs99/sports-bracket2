@@ -27,39 +27,46 @@ Two separate React contexts:
 
 ### Screen navigation
 
-`state.currentScreen` is one of `SCREENS.*` (`home | setup | draw | matchplay | dashboard`). `App.jsx` renders the matching component with `{screen === SCREENS.X && <X />}`. Navigate by dispatching `SET_SCREEN` or `BACK_TO_HOME`.
+**Auth gate in `App.jsx`:** when not logged in, always renders `OrgSelectScreen` (org picker/register/login) regardless of `state.currentScreen`. After login, renders the normal screen tree.
+
+`state.currentScreen` is one of `SCREENS.*` (`org_select | home | setup | draw | matchplay | dashboard`). `App.jsx` renders the matching component with `{screen === SCREENS.X && <X />}`. Navigate by dispatching `SET_SCREEN` or `BACK_TO_HOME`.
 
 `BACK_TO_HOME` and `SELECT_TOURNAMENT` are async — handled by `asyncDispatch` in `App.jsx`, which calls Supabase then falls back to localStorage before dispatching to the reducer.
 
 ### Storage layer (`src/utils/storage.js`)
 
-**Dual storage:** localStorage is primary (always works), Supabase is secondary (best-effort cross-device sync).
+**Supabase-primary (v0.4.0+):** Supabase is the source of truth for authenticated users. localStorage is a session cache only — wiped on login/logout.
 
-- `saveTournament(data)` — saves to localStorage immediately, then fire-and-forgets to Supabase
-- `loadAllTournaments()` — tries Supabase first (cross-device), falls back to localStorage
+- `saveTournament(data)` — saves to localStorage immediately, then fire-and-forgets to Supabase (with `user_id` from auth session)
+- `loadAllTournaments()` — when authenticated: always trusts Supabase result (even empty array), clears + repopulates localStorage. Unauthenticated → returns `[]` (fully private).
 - `loadTournament(id)` — tries Supabase, falls back to localStorage
+- `clearLocalCache()` — wipes all localStorage tournament data; called on login/logout to prevent cross-org leakage
 
 localStorage keys: `tournament_ids_v2` (ID array), `tournament_data_{id}` (full object per tournament).
 
-**Supabase RLS on `tournaments` table:** SELECT is public (anon); INSERT/UPDATE/DELETE require an authenticated Supabase session. Unauthenticated saves silently fall back to localStorage only.
+**Supabase RLS on `tournaments` table:** `user_id = auth.uid()` for SELECT/INSERT/UPDATE/DELETE. Unauthenticated access returns nothing. `tournaments` table has `user_id UUID` and `org_id UUID` columns (added in v0.4.0).
 
-**Important:** `Home.jsx` loads tournaments directly from storage (not `state.tournament`). Screens `Draw`, `MatchPlay`, `Dashboard` use `state.tournament`. Notice add/delete in `Home.jsx` bypasses the reducer (direct `saveTournament` + local state).
+**Important:** `Home.jsx` loads tournaments from `state.tournamentList` (populated via `asyncDispatch`). `Draw`, `MatchPlay`, `Dashboard` use `state.tournament`.
 
-### Admin auth (`src/utils/adminStorage.js`)
+### Admin auth (`src/utils/adminStorage.js`) — Multi-tenant (v0.4.0)
 
-Uses **Supabase Auth** with a fixed synthetic email (`admin@school-bracket.app`) — **globally single admin account only** (attempting to create a second account returns `'ALREADY_EXISTS'`). Username is a display label stored in `user_metadata`.
+**Per-org synthetic email:** `admin+{slug}@school-bracket.app`. Each school registers independently.
 
-- `hasAdmin()` — sync, checks `tournament_admin_created_v1` localStorage key
-- `saveAdmin(username, password)` — `supabase.auth.signUp`; throws `'ALREADY_EXISTS'` if account exists
-- `verifyAdmin(password)` — `supabase.auth.signInWithPassword`; returns boolean
-- `signOutAdmin()` — `supabase.auth.signOut()` (keeps localStorage flag so `hasAdmin()` stays true)
+- `loadOrganizations()` — public SELECT from `organizations` table; returns `[{ id, name, slug, created_at }]`
+- `registerOrg(name, slug, password)` — `supabase.auth.signUp` with org-scoped email + inserts into `organizations` table; throws `'ALREADY_EXISTS'` if slug taken
+- `loginOrg(slug, password)` — `supabase.auth.signInWithPassword`; returns `{ user, org }` or `null`
+- `signOutAdmin()` — `supabase.auth.signOut()`
 - `subscribeAuth(callback)` — wraps `onAuthStateChange`; used in `AdminContext` to restore session on mount
 
-**`requireAdmin(action)`** pattern: if already logged in → executes `action()` immediately; if not → stores it as `pending`, opens modal → `onSuccess()` closes modal and runs the stored action.
+**`AdminContext`** stores `isLoggedIn`, `username` (org name), `orgSlug`, `orgId`. On login: `clearLocalCache()` called to wipe any stale cross-org data.
 
-**`AdminLoginModal`** always defaults to the **login form** (`useState(false)`) regardless of the device's localStorage state. A toggle link at the bottom switches between login and account-creation modes. This ensures other devices (without the `tournament_admin_created_v1` localStorage key) can still log in.
+**`requireAdmin(action)`** pattern: if already logged in → executes `action()` immediately; if not → stores it as `pending`, opens modal.
 
-**Single-tenant architecture:** The Supabase `tournaments` table has no `user_id`/`org_id` column — SELECT is public (anon) and returns all rows. All tournaments are visible to all users regardless of who created them. Multi-tenant isolation (per-organization data separation) is a planned future enhancement requiring: `org_id` column on the table, RLS policies scoped to the owner, and multi-account admin support.
+**`AdminLoginModal`** (v0.4.0): simplified to **logout-only** UI — shown when tapping the GlobalBar admin button while logged in. Login happens via `OrgSelectScreen → OrgLoginModal`.
+
+**`OrgSelectScreen`** (`src/components/OrgSelectScreen.jsx`): lists all orgs (public read), search, click → `OrgLoginModal` (password only, email derived from slug), `RegisterForm` for new orgs.
+
+**Multi-tenant architecture:** `organizations` table links `slug` + `name` → `user_id` (Supabase Auth). `tournaments` table has `user_id` column; RLS `user_id = auth.uid()` enforces per-org isolation. Run `SUPABASE_MIGRATION.sql` when setting up a new Supabase project.
 
 ### Tournament data shape
 
