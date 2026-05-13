@@ -56,6 +56,27 @@ CREATE POLICY "tournaments_owner_delete"
   USING (auth.uid() = user_id);
 
 -- ============================================================
+-- Guest access — run this block to enable ?view=<slug> guest URLs
+-- ============================================================
+
+-- RPC: returns all tournaments for a given org slug (anonymous-accessible)
+CREATE OR REPLACE FUNCTION get_org_tournaments(org_slug text)
+RETURNS TABLE (data jsonb)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT t.data
+  FROM tournaments t
+  JOIN organizations o ON t.org_id = o.id
+  WHERE o.slug = org_slug
+  ORDER BY t.created_at DESC;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_org_tournaments TO anon;
+GRANT EXECUTE ON FUNCTION get_org_tournaments TO authenticated;
+
+-- ============================================================
 -- Verification
 -- ============================================================
 -- SELECT table_name, policy_name, cmd, qual

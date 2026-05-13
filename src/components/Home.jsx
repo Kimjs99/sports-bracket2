@@ -8,6 +8,7 @@ import { AppContext } from '../App';
 import { ACTIONS } from '../store/actions';
 import { SCREENS, MATCH_STATUS, SPORT_EMOJI } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
+
 import { loadTournament, saveTournament } from '../utils/storage';
 import { generateBracket, generateGroupTournament, calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
@@ -1016,11 +1017,20 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
 export default function Home() {
   const { state, dispatch, asyncDispatch, importedLevel } = useContext(AppContext);
   const { tournamentList } = state;
-  const { isLoggedIn, requireAdmin, setModalOpen } = useAdmin();
+  const { isLoggedIn, requireAdmin, setModalOpen, orgSlug } = useAdmin();
   const [activeLevel, setActiveLevel] = useState('고등');
   const [helpOpen, setHelpOpen] = useState(false);
   // false | 'step1' | 'step2'
   const [confirmResetAll, setConfirmResetAll] = useState(false);
+  const [guestUrlCopied, setGuestUrlCopied] = useState(false);
+
+  function copyGuestUrl() {
+    const url = `${window.location.origin}${window.location.pathname}?view=${orgSlug}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setGuestUrlCopied(true);
+      setTimeout(() => setGuestUrlCopied(false), 2000);
+    });
+  }
 
   useEffect(() => {
     if (importedLevel) {
@@ -1053,6 +1063,18 @@ export default function Home() {
               title="사용 가이드">
               <HelpCircle size={13} /> 도움말
             </button>
+            {isLoggedIn && orgSlug && (
+              <button
+                onClick={copyGuestUrl}
+                title="게스트가 대진을 열람할 수 있는 URL을 복사합니다"
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors
+                  ${guestUrlCopied
+                    ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-700 dark:text-green-400'
+                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              >
+                {guestUrlCopied ? <><Check size={12} /> URL 복사됨!</> : <><Share2 size={12} /> 게스트 URL</>}
+              </button>
+            )}
             {!isLoggedIn && (
               <button onClick={() => setModalOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">

@@ -2,7 +2,7 @@ import { createContext, useReducer, useEffect, useRef, useState, useCallback } f
 import { reducer, initialState, makeSummary } from './store/reducer';
 import { ACTIONS } from './store/actions';
 import { SCREENS } from './constants';
-import { saveTournament, loadTournament, loadAllTournaments, deleteTournament, clearAllTournaments } from './utils/storage';
+import { saveTournament, loadTournament, loadAllTournaments, deleteTournament, clearAllTournaments, loadPublicOrgInfo, loadPublicOrgTournaments } from './utils/storage';
 import { readShareParam, clearShareParam } from './utils/shareUtils';
 import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import Home from './components/Home';
@@ -13,6 +13,7 @@ import Dashboard from './components/Dashboard';
 import OrgSelectScreen from './components/OrgSelectScreen';
 import AdminLoginModal from './components/ui/AdminLoginModal';
 import GlobalBar from './components/GlobalBar';
+import GuestView from './components/GuestView';
 
 export const AppContext = createContext(null);
 
@@ -21,6 +22,19 @@ function AppInner({ theme, setTheme }) {
   const { isLoggedIn, modalOpen } = useAdmin();
   const [importedLevel, setImportedLevel] = useState(null);
   const tournamentRef = useRef(null);
+  // guest mode: null = not guest, 'loading', 'error', or { org, tournaments }
+  const [guestData, setGuestData] = useState(null);
+
+  // Detect ?view=<slug> guest URL (only when not logged in)
+  useEffect(() => {
+    if (isLoggedIn) return;
+    const slug = new URLSearchParams(window.location.search).get('view');
+    if (!slug) return;
+    setGuestData('loading');
+    Promise.all([loadPublicOrgInfo(slug), loadPublicOrgTournaments(slug)])
+      .then(([org, tournaments]) => setGuestData({ org, tournaments }))
+      .catch(() => setGuestData('error'));
+  }, [isLoggedIn]);
 
   // 로그인 후 대진 목록 로드
   const loadTournamentList = useCallback(async () => {
@@ -92,8 +106,43 @@ function AppInner({ theme, setTheme }) {
     }
   }, []);
 
-  // 로그인 전: org 선택 화면
+  // 게스트 URL (?view=<slug>) — 로그인 전에만 적용
   if (!isLoggedIn) {
+    if (guestData === 'loading') {
+      return (
+        <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+          <GlobalBar theme={theme} setTheme={setTheme} />
+          <div className="flex items-center justify-center min-h-screen">
+            <p className="text-gray-400 text-sm">대진 정보를 불러오는 중...</p>
+          </div>
+        </AppContext.Provider>
+      );
+    }
+    if (guestData === 'error') {
+      return (
+        <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+          <GlobalBar theme={theme} setTheme={setTheme} />
+          <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">잘못된 링크이거나 해당 학교를 찾을 수 없습니다.</p>
+            <button
+              onClick={() => { window.history.replaceState({}, '', window.location.pathname); setGuestData(null); }}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              홈으로
+            </button>
+          </div>
+        </AppContext.Provider>
+      );
+    }
+    if (guestData) {
+      return (
+        <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+          <GlobalBar theme={theme} setTheme={setTheme} />
+          <GuestView org={guestData.org} tournaments={guestData.tournaments} />
+        </AppContext.Provider>
+      );
+    }
+    // 로그인 전: org 선택 화면
     return (
       <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
         <GlobalBar theme={theme} setTheme={setTheme} />

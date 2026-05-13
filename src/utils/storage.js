@@ -107,6 +107,24 @@ export async function deleteTournament(id) {
   try { await supabase.from('tournaments').delete().eq('id', id); } catch { /* ignore */ }
 }
 
+// ── Guest (public) access ─────────────────────────────────────────────────────
+
+export async function loadPublicOrgInfo(orgSlug) {
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('id, name, slug')
+    .eq('slug', orgSlug)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function loadPublicOrgTournaments(orgSlug) {
+  const { data, error } = await supabase.rpc('get_org_tournaments', { org_slug: orgSlug });
+  if (error) throw error;
+  return (data ?? []).map(row => row.data).filter(Boolean);
+}
+
 export async function clearAllTournaments() {
   lsClear();
   try {
