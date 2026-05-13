@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.0] - 2026-05-13
+
+### ✨ Features
+- 앱 내 사용 가이드 모달 추가 — GlobalBar 우하단 "사용법" 버튼(BookOpen 아이콘)으로 언제든 열람 가능 (`f444f78`)
+  - 등록·로그인·대진생성·일정·결과입력·다운로드·로그아웃·주의사항 8개 섹션
+  - 로그인 전(학교 선택 화면)·후 모두 표시
+
+### 🐛 Bug Fixes
+- 대진표 다운로드 시 한글 텍스트가 □·I 박스로 깨지는 문제 수정 (`f444f78`)
+  - Noto Sans KR 폰트를 Google Fonts로 명시 로딩 (index.html)
+  - `document.fonts.ready` 대기 + dom-to-image 더블 콜 패턴 적용 (CSS·폰트 캐시 워밍업)
+
+### 📝 Documentation
+- `README.md` 사용자 가이드 문서 신규 작성 — 등록·로그인·대진생성·경기진행·다운로드·관리자 참고사항 (`f444f78`)
+- `CLAUDE.md` v0.4.0 멀티 테넌트 아키텍처 전면 업데이트 (`fc56a4e`)
+
+---
+
 ## [v0.4.0] - 2026-05-13
 
 ### ✨ Features
