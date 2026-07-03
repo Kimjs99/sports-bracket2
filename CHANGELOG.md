@@ -5,25 +5,31 @@ All notable changes to this project will be documented in this file.
 ## [v0.6.3] - 2026-07-04
 
 ### 🔧 Chores
-- Supabase keep-alive 워크플로 추가 (`supabase-keepalive.yml`): 무료 티어 자동 일시정지 방지를 위해 주 2회(월·목) REST 쿼리 ping, 실패 시 워크플로 실패로 알림
+- Supabase keep-alive 워크플로 추가 (`87399f8`): 무료 티어 자동 일시정지 방지를 위해 주 2회(월·목) REST 쿼리 ping, 실패 시 워크플로 실패로 알림
 
 ---
 
 ## [v0.6.2] - 2026-07-04
 
 ### ✅ Tests
-- reducer 테스트 33건 추가 (`reducer.test.js`): SELECT_TOURNAMENT 화면 자동 판별(DRAW/MATCH_PLAY/DASHBOARD), league 7팀+ 조별리그 자동 승격, RESHUFFLE 히스토리 상한, 결과 입력·수정 시 목록 요약 동기화, 삭제·초기화, makeSummary 집계
-- shareUtils 테스트 9건 추가 (`shareUtils.test.js`): LZString 인코딩 왕복, URL-safe 문자, 깨진 입력 null 처리, 공유 URL 생성·복원
+- reducer 테스트 33건 추가 (`6991ea3`): SELECT_TOURNAMENT 화면 자동 판별(DRAW/MATCH_PLAY/DASHBOARD), league 7팀+ 조별리그 자동 승격, RESHUFFLE 히스토리 상한, 결과 입력·수정 시 목록 요약 동기화, 삭제·초기화, makeSummary 집계
+- shareUtils 테스트 9건 추가 (`6991ea3`): LZString 인코딩 왕복, URL-safe 문자, 깨진 입력 null 처리, 공유 URL 생성·복원
 
 ---
 
 ## [v0.6.1] - 2026-07-04
 
 ### ✅ Tests
-- Vitest 도입 + 대진 핵심 로직 테스트 40건 추가 (`tournament.test.js`): 토너먼트 브라켓 생성·부전승 배치/전파·결과 입력, 리그전 라운드로빈·순위 집계, 조별리그→본선 자동 생성·크로스 시드·수정 시 본선 무효화
+- Vitest 도입 + 대진 핵심 로직 테스트 40건 추가 (`b721156`): 토너먼트 브라켓 생성·부전승 배치/전파·결과 입력, 리그전 라운드로빈·순위 집계, 조별리그→본선 자동 생성·크로스 시드·수정 시 본선 무효화
 
 ### 🐛 Bug Fixes
-- ESLint 오류 20건 해결: MatchCard TeamRow 모듈 레벨 이동, BracketTree 미사용 Connector 제거, 미사용 import/파라미터 정리, setState-in-effect·react-refresh 규칙은 의도적 패턴에 한해 disable 주석 처리
+- ESLint 오류 20건 해결 (`870227d`): MatchCard TeamRow 모듈 레벨 이동, BracketTree 미사용 Connector 제거, 미사용 import/파라미터 정리, setState-in-effect·react-refresh 규칙은 의도적 패턴에 한해 disable 주석 처리
+
+### ♻️ Refactoring
+- 사용 가이드 모달 통합 (`fda2531`) — HelpModal 제거, GuideModal로 단일화
+
+### 📝 Documentation
+- 사용 가이드 모달에 학년 선택·게스트 URL 내용 추가 (`469e455`)
 
 ---
 
