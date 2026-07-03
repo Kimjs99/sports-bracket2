@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.2] - 2026-07-04
+
+### ✅ Tests
+- reducer 테스트 33건 추가 (`reducer.test.js`): SELECT_TOURNAMENT 화면 자동 판별(DRAW/MATCH_PLAY/DASHBOARD), league 7팀+ 조별리그 자동 승격, RESHUFFLE 히스토리 상한, 결과 입력·수정 시 목록 요약 동기화, 삭제·초기화, makeSummary 집계
+- shareUtils 테스트 9건 추가 (`shareUtils.test.js`): LZString 인코딩 왕복, URL-safe 문자, 깨진 입력 null 처리, 공유 URL 생성·복원
+
+---
+
 ## [v0.6.1] - 2026-07-04
 
 ### ✅ Tests

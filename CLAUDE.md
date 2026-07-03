@@ -9,7 +9,7 @@ npm run dev        # Start dev server (Vite, http://localhost:5173)
 npm run build      # Production build → dist/
 npm run preview    # Preview production build
 npm run lint       # ESLint check
-npm test           # Vitest (src/utils/tournament.test.js — bracket/league/group logic)
+npm test           # Vitest — tournament.test.js (bracket/league/group), reducer.test.js, shareUtils.test.js
 ```
 
 Deployment: push to `master` → GitHub Actions builds → GitHub Pages.
