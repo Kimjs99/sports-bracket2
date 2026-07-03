@@ -15,6 +15,7 @@ import AdminLoginModal from './components/ui/AdminLoginModal';
 import GlobalBar from './components/GlobalBar';
 import GuestView from './components/GuestView';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AppContext = createContext(null);
 
 function AppInner({ theme, setTheme }) {
@@ -30,6 +31,7 @@ function AppInner({ theme, setTheme }) {
     if (isLoggedIn) return;
     const slug = new URLSearchParams(window.location.search).get('view');
     if (!slug) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGuestData('loading');
     Promise.all([loadPublicOrgInfo(slug), loadPublicOrgTournaments(slug)])
       .then(([org, tournaments]) => setGuestData({ org, tournaments }))

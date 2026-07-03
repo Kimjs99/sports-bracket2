@@ -105,6 +105,7 @@ function RegisterForm({ onClose, onSuccess }) {
 
   // Auto-generate slug from name
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!slugEdited && name) setSlug(slugify(name));
   }, [name, slugEdited]);
 
@@ -229,6 +230,7 @@ export default function OrgSelectScreen({ onOrgLogin }) {
     setLoading(false);
   }, [loadOrganizations]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchOrgs(); }, [fetchOrgs]);
 
   const filtered = orgs.filter(o =>

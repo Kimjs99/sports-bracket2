@@ -33,7 +33,7 @@ export function distributeByes(bracketSize, byeCount) {
   return positions.sort((a, b) => a - b);
 }
 
-function buildFirstRoundMatches(shuffledTeams, byePairIndices, bracketSize, roundName) {
+function buildFirstRoundMatches(shuffledTeams, byePairIndices, bracketSize) {
   const totalPairs = bracketSize / 2;
   const byeSet = new Set(byePairIndices);
   const matches = [];
@@ -236,7 +236,7 @@ function generateGroupRounds(groupTeams, groupId) {
   return rounds;
 }
 
-export function generateGroupTournament(teams, _seed) {
+export function generateGroupTournament(teams) {
   // Use Math.random() for truly random group assignments each time
   const shuffled = [...teams];
   for (let i = shuffled.length - 1; i > 0; i--) {

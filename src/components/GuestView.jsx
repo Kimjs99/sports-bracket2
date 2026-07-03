@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Trophy, ArrowLeft, Layers, Swords, Users, ChevronRight, Lock,
+  Trophy, ArrowLeft, Layers, Swords, ChevronRight, Lock,
 } from 'lucide-react';
 import { SCHOOL_LEVELS, SPORT_EMOJI, MATCH_STATUS } from '../constants';
 import { makeSummary } from '../store/reducer';

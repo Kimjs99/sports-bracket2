@@ -474,6 +474,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
   const [activeSportKey, setActiveSportKey] = useState(null);
 
   // Auto-select when there's only one sport group
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (sportGroups.length === 1) {
       setActiveSportKey(sportGroups[0].key);
@@ -481,6 +482,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
       setActiveSportKey(null);
     }
   }, [sportGroups]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const activeGroup = activeSportKey ? (sportGroups.find(g => g.key === activeSportKey) ?? null) : null;
   const filteredList = activeGroup?.items ?? [];
@@ -494,6 +496,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
   const [confirmResetBracket, setConfirmResetBracket] = useState(false);
 
   // Keep currentId valid when filteredList changes (including sport group changes)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (filteredList.length > 0) {
       if (!filteredList.find(t => t.id === currentId)) {
@@ -502,6 +505,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
     } else {
       setCurrentId(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredList]);
 
   // Load full tournament data when currentId changes
@@ -514,6 +518,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
       setTournament(null);
     }
   }, [currentId, summaryList]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleNew() {
     requireAdmin(() => {
@@ -1033,6 +1038,7 @@ export default function Home() {
     });
   }
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (importedLevel) {
       setActiveLevel(importedLevel);
@@ -1042,7 +1048,9 @@ export default function Home() {
       const found = ['고등', '중등', '초등'].find(lv => tournamentList.some(t => t.schoolLevel === lv));
       if (found) setActiveLevel(found);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [importedLevel]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

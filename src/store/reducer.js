@@ -4,7 +4,6 @@ import {
   generateBracket, generateLeague, generateGroupTournament,
   submitMatchResult, submitLeagueResult,
   submitGroupTournamentResult, editGroupTournamentResult,
-  isGroupStageComplete, buildKnockoutFromGroups, calcGroupConfig,
 } from '../utils/tournament';
 
 export const initialState = {
@@ -141,8 +140,8 @@ export function reducer(state, action) {
       let screen = action.payload.targetScreen ?? null;
       if (!screen) {
         const isGroupTournament = data.meta.gameFormat === 'group_tournament';
-        let hasWinner = false;
-        let doneCount = 0;
+        let hasWinner;
+        let doneCount;
         if (isGroupTournament) {
           const allGroupMatches = data.bracket.groups.flatMap(g => g.rounds.flatMap(r => r.matches));
           const knockoutMatches = data.bracket.knockout?.rounds.flatMap(r => r.matches) ?? [];
