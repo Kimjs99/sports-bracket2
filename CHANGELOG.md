@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.1] - 2026-07-04
+
+### ✅ Tests
+- Vitest 도입 + 대진 핵심 로직 테스트 40건 추가 (`tournament.test.js`): 토너먼트 브라켓 생성·부전승 배치/전파·결과 입력, 리그전 라운드로빈·순위 집계, 조별리그→본선 자동 생성·크로스 시드·수정 시 본선 무효화
+
+### 🐛 Bug Fixes
+- ESLint 오류 20건 해결: MatchCard TeamRow 모듈 레벨 이동, BracketTree 미사용 Connector 제거, 미사용 import/파라미터 정리, setState-in-effect·react-refresh 규칙은 의도적 패턴에 한해 disable 주석 처리
+
+---
+
 ## [v0.6.0] - 2026-05-13
 
 ### ✨ Features
