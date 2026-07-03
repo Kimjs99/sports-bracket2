@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.2.2] - 2026-07-04
+
+### ✅ Tests
+- Vitest 도입 + 토너먼트 핵심 로직 테스트 22건 추가 (`tournament.test.js`): 브라켓 생성, 부전승 배치·전파, 결과 입력·승자 전파, 불변성, 재입력 갱신
+
+### 📝 Documentation
+- README 최신화: Supabase 마이그레이션 반영 (계정 저장 위치, 기술 스택 dom-to-image-more)
+- CLAUDE.md에 `npm test` 명령 추가
+
+---
+
 ## [v0.2.1] - 2026-05-01
 
 ### 🐛 Bug Fixes
