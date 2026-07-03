@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.6.3] - 2026-07-04
+
+### 🔧 Chores
+- Supabase keep-alive 워크플로 추가 (`supabase-keepalive.yml`): 무료 티어 자동 일시정지 방지를 위해 주 2회(월·목) REST 쿼리 ping, 실패 시 워크플로 실패로 알림
+
+---
+
 ## [v0.6.2] - 2026-07-04
 
 ### ✅ Tests
