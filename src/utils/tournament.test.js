@@ -10,6 +10,7 @@ import {
   calcLeagueStandings,
   calcGroupConfig,
   generateGroupTournament,
+  rebuildGroupStage,
   isGroupStageComplete,
   submitGroupTournamentResult,
   editGroupTournamentResult,
@@ -437,5 +438,63 @@ describe('editGroupTournamentResult', () => {
   it('존재하지 않는 matchId는 원본을 그대로 반환한다', () => {
     const t = makeGroupTournament(8);
     expect(editGroupTournamentResult(t, 'no-such-id')).toBe(t);
+  });
+});
+
+// ── 수동 배정 (manual placement) ──────────────────────────────────────────────
+
+describe('수동 배정', () => {
+  it('generateBracket ordered 옵션은 추첨 없이 입력 순서를 유지한다', () => {
+    const teams = ['1번팀', '2번팀', '3번팀', '4번팀'];
+    const { rounds } = generateBracket(teams, 12345, { ordered: true });
+    const m = rounds[0].matches;
+    expect(m[0].home).toBe('1번팀');
+    expect(m[0].away).toBe('2번팀');
+    expect(m[1].home).toBe('3번팀');
+    expect(m[1].away).toBe('4번팀');
+  });
+
+  it('ordered + 부전승: 부전승 배치 규칙에 따라 순서대로 채운다', () => {
+    // 6팀 → 8강, 부전승 2개는 짝수 위치(0, 2)에 배치
+    const teams = ['t1', 't2', 't3', 't4', 't5', 't6'];
+    const { rounds, byeCount } = generateBracket(teams, 1, { ordered: true });
+    expect(byeCount).toBe(2);
+    const m = rounds[0].matches;
+    expect([m[0].home, m[0].away]).toEqual(['t1', 'BYE']);
+    expect([m[1].home, m[1].away]).toEqual(['t2', 't3']);
+    expect([m[2].home, m[2].away]).toEqual(['t4', 'BYE']);
+    expect([m[3].home, m[3].away]).toEqual(['t5', 't6']);
+  });
+
+  it('generateGroupTournament manualGroups는 지정한 조 편성을 그대로 사용한다', () => {
+    const manualGroups = [['a', 'b', 'c'], ['d', 'e', 'f', 'g']];
+    const teams = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    const res = generateGroupTournament(teams, { manualGroups });
+    expect(res.groupCount).toBe(2);
+    expect(res.knockoutSize).toBe(4);
+    expect(res.groups[0].id).toBe('A');
+    expect(res.groups[0].teams).toEqual(['a', 'b', 'c']);
+    expect(res.groups[1].teams).toEqual(['d', 'e', 'f', 'g']);
+    // 조별 라운드로빈이 정상 생성됐는지 (3팀 조 → 3라운드, 각 라운드 부전승 1)
+    expect(res.groups[0].rounds).toHaveLength(3);
+  });
+
+  it('rebuildGroupStage는 조 편성을 유지하고 경기 결과만 초기화한다', () => {
+    const manualGroups = [['a', 'b'], ['c', 'd']];
+    const res = generateGroupTournament(['a', 'b', 'c', 'd'], { manualGroups });
+    // 결과가 입력된 상태를 흉내
+    const played = res.groups.map(g => ({
+      ...g,
+      rounds: g.rounds.map(r => ({
+        ...r,
+        matches: r.matches.map(m => ({ ...m, homeScore: 10, awayScore: 5, winner: m.home, status: MATCH_STATUS.DONE })),
+      })),
+    }));
+    const rebuilt = rebuildGroupStage(played);
+    expect(rebuilt.map(g => g.teams)).toEqual([['a', 'b'], ['c', 'd']]);
+    rebuilt.forEach(g => g.rounds.forEach(r => r.matches.forEach(m => {
+      expect(m.homeScore).toBeNull();
+      expect(m.status === MATCH_STATUS.SCHEDULED || m.status === MATCH_STATUS.BYE).toBe(true);
+    })));
   });
 });

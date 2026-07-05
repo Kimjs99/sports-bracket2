@@ -1,7 +1,7 @@
 import { ACTIONS } from './actions';
 import { SCREENS, SPORT_NAME, MAX_HISTORY, MATCH_STATUS, GENDER_TYPES } from '../constants';
 import {
-  generateBracket, generateLeague, generateGroupTournament,
+  generateBracket, generateLeague, generateGroupTournament, rebuildGroupStage,
   submitMatchResult, submitLeagueResult,
   submitGroupTournamentResult, editGroupTournamentResult,
 } from '../utils/tournament';
@@ -10,7 +10,7 @@ export const initialState = {
   currentScreen: SCREENS.HOME,
   tournament: null,
   tournamentList: [],
-  setupMeta: { schoolLevel: '고등', gender: GENDER_TYPES[2], sport: SPORT_NAME, gameFormat: 'tournament', grade: null },
+  setupMeta: { schoolLevel: '고등', gender: GENDER_TYPES[2], sport: SPORT_NAME, gameFormat: 'tournament', grade: null, placement: 'random' },
   setupTeams: [],
   ui: {
     errorMessage: null,
@@ -18,12 +18,15 @@ export const initialState = {
   },
 };
 
-function buildTournament(meta, teams, seed) {
+function buildTournament(meta, teams, seed, manualGroups = null) {
   const fmt = meta.gameFormat ?? 'tournament';
+  const placement = meta.placement === 'manual' ? 'manual' : 'random';
 
   // Auto-upgrade league → group_tournament for 7+ teams
   if (fmt === 'league' && teams.length >= 7) {
-    const bracketData = generateGroupTournament(teams, seed);
+    const bracketData = generateGroupTournament(teams, {
+      manualGroups: placement === 'manual' ? manualGroups : null,
+    });
     return {
       meta: {
         id: `tournament_${seed}`,
@@ -40,6 +43,7 @@ function buildTournament(meta, teams, seed) {
         advancePerGroup: bracketData.advancePerGroup,
         knockoutSize: bracketData.knockoutSize,
         phase: 'group',
+        placement,
         createdAt: new Date().toISOString(),
         seed,
         status: 'in_progress',
@@ -51,7 +55,9 @@ function buildTournament(meta, teams, seed) {
     };
   }
 
-  const bracketData = fmt === 'league' ? generateLeague(teams) : generateBracket(teams, seed);
+  const bracketData = fmt === 'league'
+    ? generateLeague(teams)
+    : generateBracket(teams, seed, { ordered: placement === 'manual' });
   return {
     meta: {
       id: `tournament_${seed}`,
@@ -64,6 +70,7 @@ function buildTournament(meta, teams, seed) {
       totalTeams: teams.length,
       bracketSize: bracketData.bracketSize,
       byeCount: bracketData.byeCount,
+      placement,
       createdAt: new Date().toISOString(),
       seed,
       status: 'in_progress',
@@ -167,6 +174,7 @@ export function reducer(state, action) {
           // group_tournament maps back to 'league' in setup UI
           gameFormat: data.meta.gameFormat === 'group_tournament' ? 'league' : (data.meta.gameFormat ?? 'tournament'),
           grade: data.meta.grade ?? null,
+          placement: data.meta.placement ?? 'random',
         },
         setupTeams: [...data.teams],
         currentScreen: screen,
@@ -200,10 +208,19 @@ export function reducer(state, action) {
         setupTeams: state.setupTeams.map((t, i) => i === action.payload.index ? action.payload.name : t),
       };
 
+    case ACTIONS.MOVE_TEAM: {
+      const { index, direction } = action.payload; // direction: -1 (위) | 1 (아래)
+      const to = index + direction;
+      if (index < 0 || index >= state.setupTeams.length || to < 0 || to >= state.setupTeams.length) return state;
+      const teams = [...state.setupTeams];
+      [teams[index], teams[to]] = [teams[to], teams[index]];
+      return { ...state, setupTeams: teams };
+    }
+
     case ACTIONS.GENERATE_BRACKET: {
       const seed = action.payload?.seed ?? Date.now();
       const metaWithOrg = { ...state.setupMeta, orgId: action.payload?.orgId ?? null };
-      const tournament = buildTournament(metaWithOrg, state.setupTeams, seed);
+      const tournament = buildTournament(metaWithOrg, state.setupTeams, seed, action.payload?.manualGroups ?? null);
       return {
         ...state,
         tournament,
@@ -226,19 +243,20 @@ export function reducer(state, action) {
       const isGroupTournament = state.tournament.meta.gameFormat === 'group_tournament';
       const isLeague = state.tournament.meta.gameFormat === 'league';
 
+      // 재추첨은 항상 무작위 — 수동 배정 대진이라도 이후에는 random으로 전환
       let newBracket, newMeta;
       if (isGroupTournament) {
-        const bracketData = generateGroupTournament(state.tournament.teams, seed);
+        const bracketData = generateGroupTournament(state.tournament.teams);
         newBracket = { groups: bracketData.groups, knockout: null };
-        newMeta = { ...state.tournament.meta, seed, bracketSize: bracketData.knockoutSize, byeCount: 0, phase: 'group' };
+        newMeta = { ...state.tournament.meta, seed, placement: 'random', bracketSize: bracketData.knockoutSize, byeCount: 0, phase: 'group' };
       } else if (isLeague) {
         const bracketData = generateLeague(state.tournament.teams);
         newBracket = { rounds: bracketData.rounds };
-        newMeta = { ...state.tournament.meta, seed, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount };
+        newMeta = { ...state.tournament.meta, seed, placement: 'random', bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount };
       } else {
         const bracketData = generateBracket(state.tournament.teams, seed);
         newBracket = { rounds: bracketData.rounds };
-        newMeta = { ...state.tournament.meta, seed, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount };
+        newMeta = { ...state.tournament.meta, seed, placement: 'random', bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount };
       }
 
       const updated = { ...state.tournament, meta: newMeta, bracket: newBracket, history: newHistory };
@@ -351,13 +369,21 @@ export function reducer(state, action) {
       if (!state.tournament) return state;
       const isGroupTournament = state.tournament.meta.gameFormat === 'group_tournament';
 
+      const isManual = state.tournament.meta.placement === 'manual';
+
       let newBracket, newMeta;
       if (isGroupTournament) {
-        const bracketData = generateGroupTournament(state.tournament.teams, state.tournament.meta.seed);
-        newBracket = { groups: bracketData.groups, knockout: null };
-        newMeta = { ...state.tournament.meta, bracketSize: bracketData.knockoutSize, byeCount: 0, phase: 'group', status: 'in_progress' };
+        if (isManual) {
+          // 수동 배정: 조 편성은 유지하고 결과만 초기화
+          newBracket = { groups: rebuildGroupStage(state.tournament.bracket.groups), knockout: null };
+          newMeta = { ...state.tournament.meta, byeCount: 0, phase: 'group', status: 'in_progress' };
+        } else {
+          const bracketData = generateGroupTournament(state.tournament.teams);
+          newBracket = { groups: bracketData.groups, knockout: null };
+          newMeta = { ...state.tournament.meta, bracketSize: bracketData.knockoutSize, byeCount: 0, phase: 'group', status: 'in_progress' };
+        }
       } else {
-        const bracketData = generateBracket(state.tournament.teams, state.tournament.meta.seed);
+        const bracketData = generateBracket(state.tournament.teams, state.tournament.meta.seed, { ordered: isManual });
         newBracket = { rounds: bracketData.rounds };
         newMeta = { ...state.tournament.meta, bracketSize: bracketData.bracketSize, byeCount: bracketData.byeCount, status: 'in_progress' };
       }
@@ -378,7 +404,7 @@ export function reducer(state, action) {
       return {
         ...state,
         tournament: null,
-        setupMeta: { schoolLevel: '고등', gender: GENDER_TYPES[2], sport: SPORT_NAME, gameFormat: 'tournament', grade: null },
+        setupMeta: { schoolLevel: '고등', gender: GENDER_TYPES[2], sport: SPORT_NAME, gameFormat: 'tournament', grade: null, placement: 'random' },
         setupTeams: [],
         currentScreen: SCREENS.HOME,
         ui: { errorMessage: null, reshuffleConfirmOpen: false },

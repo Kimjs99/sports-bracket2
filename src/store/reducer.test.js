@@ -309,3 +309,71 @@ describe('makeSummary', () => {
     expect(summary.winner).toBeNull();
   });
 });
+
+describe('수동 배정 (placement: manual)', () => {
+  it('토너먼트 수동 배정은 입력 순서 그대로 배치하고 meta.placement를 기록한다', () => {
+    const s = genState(['가', '나', '다', '라'], { meta: { placement: 'manual' } });
+    expect(s.tournament.meta.placement).toBe('manual');
+    const m = s.tournament.bracket.rounds[0].matches;
+    expect([m[0].home, m[0].away, m[1].home, m[1].away]).toEqual(['가', '나', '다', '라']);
+  });
+
+  it('자동 추첨(기본)은 meta.placement가 random이다', () => {
+    const s = genState(TEAMS4);
+    expect(s.tournament.meta.placement).toBe('random');
+  });
+
+  it('manualGroups payload로 조별리그 조 편성을 직접 지정한다', () => {
+    const teams = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const base = {
+      ...initialState,
+      setupMeta: { ...initialState.setupMeta, gameFormat: 'league', placement: 'manual' },
+      setupTeams: teams,
+    };
+    const manualGroups = [['a', 'c', 'e', 'g'], ['b', 'd', 'f', 'h']];
+    const s = reducer(base, { type: ACTIONS.GENERATE_BRACKET, payload: { seed: 1, manualGroups } });
+    expect(s.tournament.meta.gameFormat).toBe('group_tournament');
+    expect(s.tournament.meta.placement).toBe('manual');
+    expect(s.tournament.bracket.groups.map(g => g.teams)).toEqual(manualGroups);
+  });
+
+  it('RESHUFFLE은 수동 배정 대진을 무작위(random)로 전환한다', () => {
+    const before = genState(['가', '나', '다', '라'], { meta: { placement: 'manual' } });
+    const s = reducer(before, { type: ACTIONS.RESHUFFLE, payload: { seed: 99 } });
+    expect(s.tournament.meta.placement).toBe('random');
+  });
+
+  it('RESET_BRACKET은 수동 조별리그의 조 편성을 유지한 채 결과만 초기화한다', () => {
+    const teams = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const base = {
+      ...initialState,
+      setupMeta: { ...initialState.setupMeta, gameFormat: 'league', placement: 'manual' },
+      setupTeams: teams,
+    };
+    const manualGroups = [['a', 'c', 'e', 'g'], ['b', 'd', 'f', 'h']];
+    let s = reducer(base, { type: ACTIONS.GENERATE_BRACKET, payload: { seed: 1, manualGroups } });
+    s = reducer(s, { type: ACTIONS.SUBMIT_RESULT, payload: { matchId: 'gA_r1m1', homeScore: 10, awayScore: 5 } });
+    const reset = reducer(s, { type: ACTIONS.RESET_BRACKET });
+    expect(reset.tournament.bracket.groups.map(g => g.teams)).toEqual(manualGroups);
+    expect(reset.tournament.bracket.knockout).toBeNull();
+    const allMatches = reset.tournament.bracket.groups.flatMap(g => g.rounds.flatMap(r => r.matches));
+    expect(allMatches.every(m => m.status !== MATCH_STATUS.DONE)).toBe(true);
+  });
+
+  it('RESET_BRACKET은 수동 토너먼트의 입력 순서 배치를 유지한다', () => {
+    let s = genState(['가', '나', '다', '라'], { meta: { placement: 'manual' } });
+    s = reducer(s, { type: ACTIONS.SUBMIT_RESULT, payload: { matchId: 'r1m1', homeScore: 10, awayScore: 5 } });
+    const reset = reducer(s, { type: ACTIONS.RESET_BRACKET });
+    const m = reset.tournament.bracket.rounds[0].matches;
+    expect([m[0].home, m[0].away, m[1].home, m[1].away]).toEqual(['가', '나', '다', '라']);
+    expect(m[0].status).toBe(MATCH_STATUS.SCHEDULED);
+  });
+
+  it('MOVE_TEAM은 팀 순서를 이동하고 경계를 벗어나면 무시한다', () => {
+    const base = { ...initialState, setupTeams: ['a', 'b', 'c'] };
+    const up = reducer(base, { type: ACTIONS.MOVE_TEAM, payload: { index: 2, direction: -1 } });
+    expect(up.setupTeams).toEqual(['a', 'c', 'b']);
+    const noop = reducer(base, { type: ACTIONS.MOVE_TEAM, payload: { index: 0, direction: -1 } });
+    expect(noop.setupTeams).toEqual(['a', 'b', 'c']);
+  });
+});

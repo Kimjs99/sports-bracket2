@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0] - 2026-07-06
+
+### ✨ Features
+- 수동 대진 배정 기능: Setup에 "대진 배정 방식"(자동 추첨 / 수동 배정) 선택 추가
+  - 토너먼트: 팀 목록 순서대로 배치(1·2번, 3·4번…), ↑↓ 순서 이동 버튼 + 1라운드 대진 미리보기
+  - 조별리그(리그전 7팀+): 팀별 조 직접 지정(조 4개 이하 칩 / 초과 시 드롭다운) + 조 편성 미리보기, 조당 최소 2팀 검증
+  - `meta.placement`('random'|'manual') 기록 — 재추첨 시 random으로 전환, RESET_BRACKET 시 수동 편성 유지
+  - `generateBracket(teams, seed, { ordered })`, `generateGroupTournament(teams, { manualGroups })`, `rebuildGroupStage(groups)` 추가
+
+### ✅ Tests
+- 수동 배정 테스트 11건 추가 (tournament 4·reducer 7): ordered 순서 유지·부전승 배치, manualGroups 편성, RESHUFFLE placement 전환, RESET_BRACKET 편성 유지, MOVE_TEAM 경계 — 총 93건
+
+### 🔍 Audit
+- 게스트 URL(?view=슬러그) 대진 생성 차단 점검: GuestView 읽기 전용·생성 액션 로그인 게이트·공유 링크 임포트 로그인 한정·서버 RLS/RPC 읽기 전용 확인 — 이상 없음
+
+---
+
 ## [v0.6.3] - 2026-07-04
 
 ### 🔧 Chores

@@ -105,13 +105,15 @@ Match ID conventions: group matches = `gA_r1m1`, knockout matches = `kr1m1`.
 
 ### Game format logic
 
+**Manual placement (v0.7.0):** `setupMeta.placement` = `'random'` (default) | `'manual'`, persisted as `meta.placement`. Manual → `generateBracket(teams, seed, { ordered: true })` skips the shuffle (teams placed in list order); for group_tournament the Setup UI collects per-team group assignments and passes `manualGroups` in the `GENERATE_BRACKET` payload. `RESHUFFLE` always randomizes and flips `placement` back to `'random'`; `RESET_BRACKET` preserves manual placement (`rebuildGroupStage` keeps group rosters, clears results).
+
 **tournament:** `submitMatchResult` propagates winner to the next round slot (`Math.floor(matchIdx / 2)`, home if even / away if odd).
 
 **league (≤ 6 teams):** `submitLeagueResult` updates the match only (no propagation); draws allowed (`winner = null`). `calcLeagueStandings(teams, rounds)` sorts by pts → goal diff → goals for.
 
 **group_tournament (≥ 7 teams, auto-upgraded from league):**
 - `calcGroupConfig(teamCount)` — `advancing = nextPowerOfTwo(max(4, ceil(n/3)))`, `groupCount = advancing / 2`. Example: 15 teams → 4 groups → 8강.
-- `generateGroupTournament(teams)` — uses `Math.random()` shuffle (not seeded) so each generation is truly random.
+- `generateGroupTournament(teams, { manualGroups })` — default uses `Math.random()` shuffle (not seeded) so each generation is truly random; `manualGroups` (string[][]) uses the given group rosters verbatim (manual placement).
 - `isGroupStageComplete(groups)` — all non-bye matches done.
 - `buildKnockoutFromGroups(groups, advancePerGroup)` — cross-seeds advancing teams: `[A1, B2, C1, D2, B1, A2, D1, C2]` so same-group teams can only meet in the final.
 - `submitGroupTournamentResult` — auto-calls `buildKnockoutFromGroups` after the last group match; editing any group match nulls out the entire knockout (standings may have changed).

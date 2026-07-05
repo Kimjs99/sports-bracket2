@@ -111,10 +111,11 @@ function buildAllRounds(firstRoundMatches, bracketSize) {
   return rounds;
 }
 
-export function generateBracket(teams, seed) {
+// options.ordered: true면 추첨 없이 입력 순서 그대로 배치 (수동 배정)
+export function generateBracket(teams, seed, { ordered = false } = {}) {
   const bracketSize = nextPowerOfTwo(teams.length);
   const byeCount = bracketSize - teams.length;
-  const shuffled = fisherYatesShuffle(teams, seed);
+  const shuffled = ordered ? [...teams] : fisherYatesShuffle(teams, seed);
   const byePairIndices = distributeByes(bracketSize, byeCount);
   const firstRound = buildFirstRoundMatches(shuffled, byePairIndices, bracketSize);
   const rounds = buildAllRounds(firstRound, bracketSize);
@@ -236,18 +237,28 @@ function generateGroupRounds(groupTeams, groupId) {
   return rounds;
 }
 
-export function generateGroupTournament(teams) {
-  // Use Math.random() for truly random group assignments each time
-  const shuffled = [...teams];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const { groupCount, advancePerGroup, knockoutSize } = calcGroupConfig(teams.length);
+// options.manualGroups: string[][] — 조별 팀 명단을 직접 지정 (수동 배정, 추첨 없음)
+export function generateGroupTournament(teams, { manualGroups = null } = {}) {
+  const { advancePerGroup } = calcGroupConfig(teams.length);
 
-  // Distribute evenly: team i → group (i % groupCount)
-  const groupTeams = Array.from({ length: groupCount }, () => []);
-  shuffled.forEach((team, i) => groupTeams[i % groupCount].push(team));
+  let groupTeams;
+  if (manualGroups) {
+    groupTeams = manualGroups.map(g => [...g]);
+  } else {
+    // Use Math.random() for truly random group assignments each time
+    const shuffled = [...teams];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    // Distribute evenly: team i → group (i % groupCount)
+    const { groupCount } = calcGroupConfig(teams.length);
+    groupTeams = Array.from({ length: groupCount }, () => []);
+    shuffled.forEach((team, i) => groupTeams[i % groupCount].push(team));
+  }
+
+  const groupCount = groupTeams.length;
+  const knockoutSize = groupCount * advancePerGroup;
 
   const groups = groupTeams.map((gt, i) => {
     const id = String.fromCharCode(65 + i); // 'A', 'B', ...
@@ -255,6 +266,15 @@ export function generateGroupTournament(teams) {
   });
 
   return { groups, knockout: null, groupCount, advancePerGroup, knockoutSize, bracketSize: knockoutSize, byeCount: 0 };
+}
+
+// 조 편성(팀 배정)은 유지한 채 조별 라운드만 새로 만든다 (수동 배정 대진 초기화용)
+export function rebuildGroupStage(groups) {
+  return groups.map(g => ({
+    ...g,
+    teams: [...g.teams],
+    rounds: generateGroupRounds(g.teams, g.id),
+  }));
 }
 
 export function isGroupStageComplete(groups) {
