@@ -119,6 +119,17 @@ export async function loadPublicOrgInfo(orgSlug) {
   return data;
 }
 
+// 레거시 ?t= 공유 링크 → 게스트 URL 리다이렉트용 (organizations는 공개 SELECT)
+export async function loadPublicOrgSlugById(orgId) {
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('slug')
+    .eq('id', orgId)
+    .single();
+  if (error) throw error;
+  return data?.slug ?? null;
+}
+
 export async function loadPublicOrgTournaments(orgSlug) {
   const { data, error } = await supabase.rpc('get_org_tournaments', { org_slug: orgSlug });
   if (error) throw error;

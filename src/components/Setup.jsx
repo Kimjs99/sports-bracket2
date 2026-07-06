@@ -493,7 +493,8 @@ export default function Setup() {
         </div>
 
         {/* Bracket size preview */}
-        {setupTeams.length >= MIN_TEAMS && (() => {
+        {/* 브라켓 수치는 토너먼트에만 의미 있음 (리그전은 라운드로빈/조별리그) */}
+        {setupMeta.gameFormat === 'tournament' && setupTeams.length >= MIN_TEAMS && (() => {
           const n = setupTeams.length;
           const bracketSize = n <= 1 ? 2 : Math.pow(2, Math.ceil(Math.log2(n)));
           const byeCount = bracketSize - n;

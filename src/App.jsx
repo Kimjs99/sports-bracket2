@@ -2,8 +2,8 @@ import { createContext, useReducer, useEffect, useRef, useState, useCallback } f
 import { reducer, initialState, makeSummary } from './store/reducer';
 import { ACTIONS } from './store/actions';
 import { SCREENS } from './constants';
-import { saveTournament, loadTournament, loadAllTournaments, deleteTournament, clearAllTournaments, loadPublicOrgInfo, loadPublicOrgTournaments } from './utils/storage';
-import { readShareParam, clearShareParam } from './utils/shareUtils';
+import { saveTournament, loadTournament, loadAllTournaments, deleteTournament, clearAllTournaments, loadPublicOrgInfo, loadPublicOrgSlugById, loadPublicOrgTournaments } from './utils/storage';
+import { readShareParam } from './utils/shareUtils';
 import { AdminProvider, useAdmin } from './contexts/AdminContext';
 import Home from './components/Home';
 import Setup from './components/Setup';
@@ -21,15 +21,30 @@ export const AppContext = createContext(null);
 function AppInner({ theme, setTheme }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { isLoggedIn, modalOpen } = useAdmin();
-  const [importedLevel, setImportedLevel] = useState(null);
   const tournamentRef = useRef(null);
   // guest mode: null = not guest, 'loading', 'error', or { org, tournaments }
   const [guestData, setGuestData] = useState(null);
+  // 레거시 공유 링크(?t=): 게스트 URL(?view=)로 일원화됨 — 해당 학교 게스트 화면으로 전환
+  const [legacyShare] = useState(() => new URLSearchParams(window.location.search).has('t'));
 
-  // Detect ?view=<slug> guest URL (only when not logged in)
+  useEffect(() => {
+    if (!legacyShare) return;
+    (async () => {
+      const orgId = readShareParam()?.meta?.orgId;
+      const slug = orgId ? await loadPublicOrgSlugById(orgId).catch(() => null) : null;
+      const url = new URL(window.location.href);
+      url.searchParams.delete('t');
+      if (slug) url.searchParams.set('view', slug);
+      window.location.replace(url.toString());
+    })();
+  }, [legacyShare]);
+
+  // Detect ?view=<slug> guest URL (only when not logged in; 공유 링크가 우선)
   useEffect(() => {
     if (isLoggedIn) return;
-    const slug = new URLSearchParams(window.location.search).get('view');
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('t')) return;
+    const slug = params.get('view');
     if (!slug) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setGuestData('loading');
@@ -51,13 +66,6 @@ function AppInner({ theme, setTheme }) {
   useEffect(() => {
     if (isLoggedIn) {
       async function init() {
-        const shared = readShareParam();
-        if (shared?.meta?.id) {
-          await saveTournament(shared);
-          clearShareParam();
-          setImportedLevel(shared.meta.schoolLevel ?? null);
-          setTimeout(() => setImportedLevel(null), 4000);
-        }
         await loadTournamentList();
         dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.HOME } });
       }
@@ -108,11 +116,23 @@ function AppInner({ theme, setTheme }) {
     }
   }, []);
 
+  // 레거시 공유 링크(?t=) — 게스트 URL로 리다이렉트되는 동안 로딩 표시
+  if (legacyShare) {
+    return (
+      <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
+        <GlobalBar theme={theme} setTheme={setTheme} />
+        <div className="flex items-center justify-center min-h-screen">
+          <p className="text-gray-400 text-sm">대진 정보를 불러오는 중...</p>
+        </div>
+      </AppContext.Provider>
+    );
+  }
+
   // 게스트 URL (?view=<slug>) — 로그인 전에만 적용
   if (!isLoggedIn) {
     if (guestData === 'loading') {
       return (
-        <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+        <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
           <GlobalBar theme={theme} setTheme={setTheme} />
           <div className="flex items-center justify-center min-h-screen">
             <p className="text-gray-400 text-sm">대진 정보를 불러오는 중...</p>
@@ -122,7 +142,7 @@ function AppInner({ theme, setTheme }) {
     }
     if (guestData === 'error') {
       return (
-        <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+        <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
           <GlobalBar theme={theme} setTheme={setTheme} />
           <div className="flex flex-col items-center justify-center min-h-screen gap-3">
             <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">잘못된 링크이거나 해당 학교를 찾을 수 없습니다.</p>
@@ -138,7 +158,7 @@ function AppInner({ theme, setTheme }) {
     }
     if (guestData) {
       return (
-        <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+        <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
           <GlobalBar theme={theme} setTheme={setTheme} />
           <GuestView org={guestData.org} tournaments={guestData.tournaments} />
         </AppContext.Provider>
@@ -146,7 +166,7 @@ function AppInner({ theme, setTheme }) {
     }
     // 로그인 전: org 선택 화면
     return (
-      <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+      <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
         <GlobalBar theme={theme} setTheme={setTheme} />
         <OrgSelectScreen onOrgLogin={() => {}} />
         {modalOpen && <AdminLoginModal />}
@@ -157,7 +177,7 @@ function AppInner({ theme, setTheme }) {
   const screen = state.currentScreen;
 
   return (
-    <AppContext.Provider value={{ state, dispatch, asyncDispatch, importedLevel }}>
+    <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
       <GlobalBar theme={theme} setTheme={setTheme} />
       {screen === SCREENS.HOME && <Home />}
       {screen === SCREENS.SETUP && <Setup />}

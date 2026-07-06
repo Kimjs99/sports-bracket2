@@ -152,7 +152,7 @@ export default function DownloadMenu({ targetRef, filename = 'bracket' }) {
       <button
         onClick={() => !isLoading && setOpen(v => !v)}
         disabled={isLoading}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors whitespace-nowrap"
       >
         {isLoading
           ? <><Loader2 size={13} className="animate-spin" /> {loading?.toUpperCase()} 변환 중…</>

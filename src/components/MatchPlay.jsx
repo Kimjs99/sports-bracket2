@@ -104,18 +104,18 @@ function MatchResultCard({ match, roundName, dispatch, allowDraw }) {
                     type="number" min="0" value={home}
                     onChange={e => { setHome(e.target.value); setError(''); }}
                     disabled={!match.home} placeholder="0"
-                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:disabled:bg-gray-800"
+                    className="flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:disabled:bg-gray-800"
                   />
                   <span className="text-gray-400 font-bold text-lg">:</span>
                   <input
                     type="number" min="0" value={away}
                     onChange={e => { setAwayScore(e.target.value); setError(''); }}
                     disabled={!match.away} placeholder="0"
-                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:disabled:bg-gray-800"
+                    className="flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:disabled:bg-gray-800"
                   />
                   <button
                     onClick={submit} disabled={!match.home || !match.away}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors">
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed transition-colors shrink-0 whitespace-nowrap">
                     저장
                   </button>
                 </div>

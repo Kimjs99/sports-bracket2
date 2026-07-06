@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.1] - 2026-07-07
+
+### 🔒 Security / Behavior
+- 공유 기능을 게스트 URL(?view=)로 일원화 — 수신자는 열람 외 어떤 기능도 사용 불가
+  - 대진별 ?t= 스냅샷 공유 링크 생성 제거: 대진 화면의 "공유 링크" 버튼이 게스트 URL 복사로 대체됨
+  - 기존에 배포된 레거시 ?t= 링크는 해당 학교의 게스트 URL로 자동 리다이렉트(`loadPublicOrgSlugById`로 orgId→slug 해석, 실패 시 파라미터만 제거)
+  - 기존 로그인-시-임포트 동작 제거(`importedLevel` 배너 포함) — 공유 링크로 관리 기능에 진입할 수 있던 경로 차단
+
+### 📱 Responsive
+- 모바일 레이아웃 최적화(500px 이하 실측 검증):
+  - Draw: 본문 `items-start`가 모바일 세로 스택에서 대진표를 화면 폭 밖으로 밀던 문제 수정(`lg:items-start`), 헤더 버튼 flex-wrap + `whitespace-nowrap`(내려받기/재구성/경기 진행 글자 깨짐 해소)
+  - MatchPlay: 점수 입력 `input[type=number]` 내재 최소폭으로 저장 버튼이 잘리던 문제 수정(`min-w-0` + `shrink-0`)
+  - Setup: 대진 미리보기(브라켓/부전승/라운드)를 토너먼트 형식에서만 표시(리그전에 무의미한 수치 노출 제거)
+
+---
+
 ## [v0.7.0] - 2026-07-06
 
 ### ✨ Features

@@ -149,9 +149,9 @@ Tailwind v4 class-based dark mode via `@custom-variant dark (&:where(.dark, .dar
 
 `dom-to-image-more` + jsPDF are **dynamically imported** (lazy-loaded) on first use. `captureBlob(element, type, quality)` uses `scale: 2` and hardcodes `bgcolor` per theme (`#1e293b` dark / `#ffffff` light).
 
-### Share links (`src/utils/shareUtils.js`)
+### Share links — unified into guest URLs (v0.7.1)
 
-`buildShareUrl(tournament)` LZString-compresses the full tournament object into a `?t=` query param. On mount, `App.jsx` calls `readShareParam()` — if found, saves via `saveTournament`, removes the param, and sets `importedLevel` for 4 s. Share links work for all formats including group_tournament because they compress the full object, not just the seed.
+Sharing is guest-URL-only (`?view=<slug>`, read-only, server-backed). The per-tournament `?t=` snapshot links are no longer created — the former "공유 링크" button in Home now copies the guest URL. **Legacy `?t=` links** are handled in `App.jsx`: decode via `readShareParam()`, look up the org slug from `meta.orgId` (`loadPublicOrgSlugById`, public SELECT), then `location.replace` to `?view=<slug>` (param is simply dropped if the org can't be resolved). `buildShareUrl`/`encodeTournament` remain in `shareUtils.js` only for legacy decode support and tests.
 
 ### Key files at a glance
 

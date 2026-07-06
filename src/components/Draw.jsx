@@ -449,8 +449,8 @@ export default function Draw() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Top bar */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm no-print">
-        <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => asyncDispatch({ type: ACTIONS.BACK_TO_HOME })}
               className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-1">
@@ -472,13 +472,13 @@ export default function Draw() {
             />
             <button
               onClick={() => requireAdmin(() => dispatch({ type: ACTIONS.TOGGLE_RESHUFFLE_CONFIRM, payload: { open: true } }))}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap">
               {isLoggedIn ? <RefreshCw size={13} /> : <Lock size={13} />} 재구성
             </button>
             {isLoggedIn && (
               <button
                 onClick={() => dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.MATCH_PLAY } })}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700">
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 whitespace-nowrap">
                 경기 진행 <ChevronRight size={13} />
               </button>
             )}
@@ -519,8 +519,9 @@ export default function Draw() {
       )}
 
       {/* Body */}
-      <div className="max-w-[1400px] mx-auto p-4 flex flex-col lg:flex-row gap-4 items-start">
-        <div className="flex-1 min-w-0">
+      {/* 모바일(flex-col)에선 기본 stretch로 본문이 화면 폭을 넘지 않게, lg에서만 items-start */}
+      <div className="max-w-[1400px] mx-auto p-4 flex flex-col lg:flex-row gap-4 lg:items-start">
+        <div className="flex-1 min-w-0 w-full lg:w-auto">
 
           {/* Group Tournament tabs */}
           {isGroupTournament && activeTab === 'group_standings' && (
