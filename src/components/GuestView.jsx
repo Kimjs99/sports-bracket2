@@ -247,7 +247,8 @@ function SportCard({ group, onSelect }) {
   const isOver = !!summary.winner;
   const isInProgress = !isOver && summary.doneCount > 0;
   const pct = summary.totalNonBye > 0 ? Math.round((summary.doneCount / summary.totalNonBye) * 100) : 0;
-  const genderLabel = group.gender !== '혼성' ? ` ${group.gender}` : '';
+  // 동일 종목 다학년/다성별 편성 구분: 종목 (학년, 성별)
+  const subLabel = [group.grade, group.gender !== '혼성' ? group.gender : null].filter(Boolean).join(', ');
   const formatLabel = summary.gameFormat === 'league' ? '리그' : summary.gameFormat === 'group_tournament' ? '조별리그' : '토너먼트';
 
   return (
@@ -257,7 +258,7 @@ function SportCard({ group, onSelect }) {
         <div className="flex-1 min-w-0">
           <div className="text-2xl mb-1">{SPORT_EMOJI[group.sport] ?? '🏅'}</div>
           <div className="font-bold text-gray-900 dark:text-gray-100 text-base truncate">
-            {group.sport}{genderLabel}
+            {group.sport}{subLabel && <span className="font-semibold text-gray-500 dark:text-gray-400"> ({subLabel})</span>}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             {summary.totalTeams}팀 · {formatLabel}{count > 1 ? ` · ${count}차 대진` : ''}
@@ -325,8 +326,9 @@ export default function GuestView({ org, tournaments }) {
   const sportGroups = useMemo(() => {
     const map = new Map();
     levelTournaments.forEach(t => {
-      const key = `${t.meta.sport}__${t.meta.gender ?? '혼성'}`;
-      if (!map.has(key)) map.set(key, { key, sport: t.meta.sport, gender: t.meta.gender ?? '혼성', items: [] });
+      // 학년까지 그룹 키에 포함 — 동일 종목·성별의 다학년 대진이 차수로 뭉치지 않게 분리
+      const key = `${t.meta.sport}__${t.meta.gender ?? '혼성'}__${t.meta.grade ?? ''}`;
+      if (!map.has(key)) map.set(key, { key, sport: t.meta.sport, gender: t.meta.gender ?? '혼성', grade: t.meta.grade ?? null, items: [] });
       map.get(key).items.push(t);
     });
     return [...map.values()];

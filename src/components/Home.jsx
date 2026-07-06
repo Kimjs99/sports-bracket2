@@ -394,7 +394,8 @@ function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLo
             const isOver = !!latest.winner;
             const isInProgress = !isOver && latest.doneCount > 0;
             const pct = latest.totalNonBye > 0 ? Math.round((latest.doneCount / latest.totalNonBye) * 100) : 0;
-            const genderLabel = group.gender !== '혼성' ? ` ${group.gender}` : '';
+            // 동일 종목 다학년/다성별 편성 구분: 종목 (학년, 성별)
+            const subLabel = [group.grade, group.gender !== '혼성' ? group.gender : null].filter(Boolean).join(', ');
             const formatLabel = latest.gameFormat === 'league' ? '리그' : latest.gameFormat === 'group_tournament' ? '조별리그' : '토너먼트';
 
             return (
@@ -404,7 +405,7 @@ function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLo
                   <div className="flex-1 min-w-0">
                     <div className="text-2xl mb-1">{SPORT_EMOJI[group.sport] ?? '🏅'}</div>
                     <div className="font-bold text-gray-900 dark:text-gray-100 text-base truncate">
-                      {group.sport}{genderLabel}
+                      {group.sport}{subLabel && <span className="font-semibold text-gray-500 dark:text-gray-400"> ({subLabel})</span>}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       {latest.totalTeams}팀 · {formatLabel}{count > 1 ? ` · ${count}차 대진` : ''}
@@ -463,8 +464,9 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
   const sportGroups = useMemo(() => {
     const map = new Map();
     summaryList.forEach(t => {
-      const key = `${t.sport}__${t.gender ?? '혼성'}`;
-      if (!map.has(key)) map.set(key, { key, sport: t.sport, gender: t.gender ?? '혼성', items: [] });
+      // 학년까지 그룹 키에 포함 — 동일 종목·성별의 다학년 대진이 차수로 뭉치지 않게 분리
+      const key = `${t.sport}__${t.gender ?? '혼성'}__${t.grade ?? ''}`;
+      if (!map.has(key)) map.set(key, { key, sport: t.sport, gender: t.gender ?? '혼성', grade: t.grade ?? null, items: [] });
       map.get(key).items.push(t);
     });
     return [...map.values()];
