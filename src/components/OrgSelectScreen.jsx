@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Search, School, Plus, ChevronRight, KeyRound, Eye, EyeOff, Loader, X, AlertCircle } from 'lucide-react';
 import { useAdmin } from '../contexts/AdminContext';
 
+// 식별자는 합성 이메일(admin+{slug}@…)에 쓰이므로 영문·숫자·하이픈만 허용 (한글은 가입 실패)
 function slugify(text) {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9가-힣\s-]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
     .replace(/[\s]+/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 30);
@@ -99,6 +100,7 @@ function RegisterForm({ onClose, onSuccess }) {
   const [slugEdited, setSlugEdited] = useState(false);
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
+  const [regCode, setRegCode] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -113,16 +115,18 @@ function RegisterForm({ onClose, onSuccess }) {
     setError('');
     if (!name.trim()) { setError('학교/기관명을 입력하세요.'); return; }
     if (!slug.trim()) { setError('식별자를 입력하세요.'); return; }
-    if (!/^[a-z0-9가-힣-]{2,30}$/.test(slug)) { setError('식별자는 영문 소문자, 숫자, 한글, 하이픈만 사용할 수 있습니다.'); return; }
+    if (!/^[a-z0-9-]{2,30}$/.test(slug)) { setError('식별자는 영문 소문자, 숫자, 하이픈만 사용할 수 있습니다.'); return; }
     if (password.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return; }
     if (password !== password2) { setError('비밀번호가 일치하지 않습니다.'); return; }
+    if (!regCode.trim()) { setError('등록 코드를 입력하세요.'); return; }
 
     setLoading(true);
     try {
-      await createOrg(name.trim(), slug.trim(), password);
+      await createOrg(name.trim(), slug.trim(), password, regCode.trim());
       onSuccess();
     } catch (e) {
       if (e.message === 'ALREADY_EXISTS') setError('이미 등록된 식별자입니다. 다른 식별자를 사용해 주세요.');
+      else if (e.message === 'INVALID_CODE') setError('등록 코드가 올바르지 않습니다. 운영자에게 문의하세요.');
       else setError('등록에 실패했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setLoading(false);
@@ -161,7 +165,7 @@ function RegisterForm({ onClose, onSuccess }) {
               placeholder="예: seoul-middle"
               className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 font-mono"
             />
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">영문·숫자·한글·하이픈, 2–30자</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">영문 소문자·숫자·하이픈, 2–30자</p>
           </div>
 
           <div>
@@ -187,9 +191,21 @@ function RegisterForm({ onClose, onSuccess }) {
             <input
               type={showPw ? 'text' : 'password'} value={password2}
               onChange={e => { setPassword2(e.target.value); setError(''); }}
-              onKeyDown={e => e.key === 'Enter' && submit()}
               placeholder="비밀번호 재입력"
               className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1 block">
+              등록 코드 <span className="text-gray-400 font-normal">(운영자에게 문의)</span>
+            </label>
+            <input
+              type="text" value={regCode}
+              onChange={e => { setRegCode(e.target.value); setError(''); }}
+              onKeyDown={e => e.key === 'Enter' && submit()}
+              placeholder="배부받은 등록 코드 입력"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 font-mono"
             />
           </div>
 

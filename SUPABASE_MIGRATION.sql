@@ -82,3 +82,58 @@ GRANT EXECUTE ON FUNCTION get_org_tournaments TO authenticated;
 -- SELECT table_name, policy_name, cmd, qual
 -- FROM pg_policies
 -- WHERE tablename IN ('tournaments','organizations');
+
+-- ============================================================
+-- Registration code gate (v0.7.3) — 무단 학교/기관 등록 차단
+-- 실제 코드 값은 저장소에 커밋하지 말 것 (아래 placeholder를 교체해 실행)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  key   text PRIMARY KEY,
+  value text NOT NULL
+);
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+-- 정책 없음 → anon/authenticated 직접 접근 불가 (SECURITY DEFINER 함수만 조회)
+
+INSERT INTO app_settings (key, value) VALUES ('registration_code', '<등록코드로_교체>')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+CREATE OR REPLACE FUNCTION validate_registration_code(code text)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (SELECT 1 FROM app_settings WHERE key = 'registration_code' AND value = code);
+$$;
+GRANT EXECUTE ON FUNCTION validate_registration_code TO anon;
+GRANT EXECUTE ON FUNCTION validate_registration_code TO authenticated;
+
+CREATE OR REPLACE FUNCTION register_organization(org_name text, org_slug text, code text)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  new_org organizations;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'NOT_AUTHENTICATED';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM app_settings WHERE key = 'registration_code' AND value = code) THEN
+    RAISE EXCEPTION 'INVALID_CODE';
+  END IF;
+  INSERT INTO organizations (name, slug, user_id)
+  VALUES (org_name, org_slug, auth.uid())
+  RETURNING * INTO new_org;
+  RETURN row_to_json(new_org);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION register_organization TO authenticated;
+
+-- 클라이언트 직접 INSERT 봉쇄 — 등록은 RPC로만 가능
+DROP POLICY IF EXISTS "orgs_owner_insert" ON organizations;
+
+-- 등록 코드 변경:
+-- UPDATE app_settings SET value = '<새코드>' WHERE key = 'registration_code';

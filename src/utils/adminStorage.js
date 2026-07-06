@@ -18,7 +18,12 @@ export async function loadOrganizations() {
   }
 }
 
-export async function registerOrg(name, slug, password) {
+export async function registerOrg(name, slug, password, regCode) {
+  // 등록 코드 사전 검증 — 계정 생성 전에 빠르게 실패시킨다.
+  // (최종 강제는 register_organization RPC가 서버에서 수행; 직접 INSERT는 RLS로 봉쇄됨)
+  const { data: valid, error: codeErr } = await supabase.rpc('validate_registration_code', { code: regCode ?? '' });
+  if (codeErr || valid !== true) throw new Error('INVALID_CODE');
+
   const email = orgEmail(slug);
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -31,14 +36,17 @@ export async function registerOrg(name, slug, password) {
   }
   if (!data.session) throw new Error('ALREADY_EXISTS');
 
-  const { error: orgErr } = await supabase.from('organizations').insert({
-    name,
-    slug,
-    user_id: data.user.id,
+  const { data: org, error: orgErr } = await supabase.rpc('register_organization', {
+    org_name: name,
+    org_slug: slug,
+    code: regCode ?? '',
   });
-  if (orgErr) throw orgErr;
+  if (orgErr) {
+    if (orgErr.message?.includes('INVALID_CODE')) throw new Error('INVALID_CODE');
+    throw orgErr;
+  }
 
-  return { user: data.user, org: { id: null, name, slug } };
+  return { user: data.user, org: { id: org?.id ?? null, name, slug } };
 }
 
 export async function loginOrg(slug, password) {

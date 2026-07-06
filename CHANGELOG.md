@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.3] - 2026-07-07
+
+### 🔒 Security
+- 무단 학교/기관 등록 차단 — 등록 코드 게이트 도입
+  - 기존에는 누구나 "새 학교/기관 등록"으로 조직을 만들어 자기 조직의 관리자(대진 생성 가능)가 될 수 있었음
+  - 등록 폼에 "등록 코드" 필드 추가, 서버(DB)에서 강제: `app_settings`(RLS·정책 없음, 코드 비노출) + `validate_registration_code`(가입 전 사전 검증) + `register_organization`(SECURITY DEFINER, 코드 재검증 후 조직 생성) RPC
+  - `organizations` 직접 INSERT 정책(`orgs_owner_insert`) 제거 — 등록은 RPC로만 가능, API 우회 차단
+  - 실제 코드 값은 DB에만 존재(저장소 미포함), 변경은 `app_settings` UPDATE로
+
+### 🐛 Bug Fixes
+- 식별자 입력에서 한글 제거 — 합성 이메일(admin+{slug}@…) 규칙상 한글 식별자는 가입이 항상 실패했음("등록에 실패했습니다"로만 표시). slugify·검증·안내문구를 영문 소문자·숫자·하이픈으로 통일
+
+---
+
 ## [v0.7.2] - 2026-07-07
 
 ### 🔒 Security / Behavior

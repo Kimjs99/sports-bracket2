@@ -62,8 +62,8 @@ export function AdminProvider({ children }) {
     setOrgId(null);
   }, []);
 
-  const createOrg = useCallback(async (name, slug, password) => {
-    const result = await registerOrg(name, slug, password);
+  const createOrg = useCallback(async (name, slug, password, regCode) => {
+    const result = await registerOrg(name, slug, password, regCode);
     setIsLoggedIn(true);
     setUsername(result.org.name);
     setOrgSlug(result.org.slug);

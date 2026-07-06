@@ -56,7 +56,7 @@ localStorage keys: `tournament_ids_v2` (ID array), `tournament_data_{id}` (full 
 **Per-org synthetic email:** `admin+{slug}@school-bracket.app`. Each school registers independently.
 
 - `loadOrganizations()` — public SELECT from `organizations` table; returns `[{ id, name, slug, created_at }]`
-- `registerOrg(name, slug, password)` — `supabase.auth.signUp` with org-scoped email + inserts into `organizations` table; throws `'ALREADY_EXISTS'` if slug taken
+- `registerOrg(name, slug, password, regCode)` — **registration-code gated (v0.7.3)**: pre-validates the code via `validate_registration_code` RPC (fast-fail before creating the auth user), then `supabase.auth.signUp`, then creates the org via `register_organization` RPC which re-validates the code server-side (SECURITY DEFINER against the policy-less `app_settings` table). Direct INSERT into `organizations` is blocked (the `orgs_owner_insert` policy was dropped). Throws `'INVALID_CODE'` / `'ALREADY_EXISTS'`. The actual code lives only in the DB — never commit it to the repo.
 - `loginOrg(slug, password)` — `supabase.auth.signInWithPassword`; returns `{ user, org }` or `null`
 - `signOutAdmin()` — `supabase.auth.signOut()`
 - `subscribeAuth(callback)` — wraps `onAuthStateChange`; used in `AdminContext` to restore session on mount
