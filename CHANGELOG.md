@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.2] - 2026-07-07
+
+### 🔒 Security / Behavior
+- 게스트/관리자 권한 경계 명확화: 게스트 URL(?view=)은 **로그인 여부와 무관하게 항상 열람 전용 화면** 렌더링
+  - 기존에는 관리자 세션 보유 시 게스트 URL이 곧바로 관리자 화면을 띄워 두 모드의 경계가 모호했음
+  - 관리자 전환은 게스트 화면 우상단 버튼으로만: 세션 보유 시 녹색 "관리자 화면"(본인 즉시 전환), 미보유 시 회색 "관리자 로그인"(학교 선택·비밀번호 필요)
+  - 게스트 화면에서도 GlobalBar 관리자 배지 → 로그아웃 모달 동작하도록 AdminLoginModal 렌더 추가
+
+### ✨ Features
+- 공용 푸터 도입: 저작자(© 2026 kimjs) · 앱 버전(`APP_VERSION` 상수, CHANGELOG와 함께 갱신) · 사용제한 문구(교육활동 목적, 무단 복제·상업적 이용 금지)를 관리자/게스트 전 화면에 표시. package.json 버전도 0.7.2로 동기화
+
+---
+
 ## [v0.7.1] - 2026-07-07
 
 ### 🔒 Security / Behavior

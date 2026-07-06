@@ -52,3 +52,6 @@ export const MIN_TEAMS = 2;
 export const MAX_TEAMS = 64;
 export const MAX_TEAM_NAME_LENGTH = 20;
 export const MAX_HISTORY = 10;
+
+// 앱 버전 — CHANGELOG.md 최신 릴리스와 함께 갱신 (푸터 표기용)
+export const APP_VERSION = 'v0.7.2';

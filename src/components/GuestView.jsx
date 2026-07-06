@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import {
-  Trophy, ArrowLeft, Layers, Swords, ChevronRight, Lock,
+  Trophy, ArrowLeft, Layers, Swords, ChevronRight, Lock, ShieldCheck,
 } from 'lucide-react';
+import { useAdmin } from '../contexts/AdminContext';
 import { SCHOOL_LEVELS, SPORT_EMOJI, MATCH_STATUS } from '../constants';
+import Footer from './ui/Footer';
 import { makeSummary } from '../store/reducer';
 import { calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
@@ -304,6 +306,7 @@ function SportCard({ group, onSelect }) {
 // ─── GuestView (root) ─────────────────────────────────────────────────────────
 
 export default function GuestView({ org, tournaments }) {
+  const { isLoggedIn } = useAdmin();
   const [activeLevel, setActiveLevel] = useState(() => {
     const found = ['고등', '중등', '초등'].find(lv =>
       tournaments.some(t => t.meta.schoolLevel === lv)
@@ -339,9 +342,7 @@ export default function GuestView({ org, tournaments }) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <GuestTournamentView tournament={selectedTournament} onBack={() => setSelectedTournament(null)} />
-        <footer className="text-center text-[11px] text-gray-400 dark:text-gray-600 py-4 pb-6">
-          © 2026 kimjs · 학교스포츠클럽 대진관리
-        </footer>
+        <Footer />
       </div>
     );
   }
@@ -358,11 +359,19 @@ export default function GuestView({ org, tournaments }) {
               <p className="text-xs text-gray-500 dark:text-gray-400">학교스포츠클럽 대진 현황</p>
             </div>
           </div>
+          {/* 게스트 화면은 항상 열람 전용 — 이 버튼만이 관리자 모드 진입 경로.
+              세션 보유(관리자 본인) 시에만 즉시 전환되고, 그 외에는 로그인 화면으로 이동한다. */}
           <button
             onClick={goAdmin}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors shrink-0
+              ${isLoggedIn
+                ? 'text-green-700 dark:text-green-400 border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/40 hover:bg-green-100 dark:hover:bg-green-900/60'
+                : 'text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
           >
-            <Lock size={12} /> 관리자
+            {isLoggedIn
+              ? <><ShieldCheck size={12} /> 관리자 화면</>
+              : <><Lock size={12} /> 관리자 로그인</>}
           </button>
         </div>
 
@@ -403,9 +412,7 @@ export default function GuestView({ org, tournaments }) {
         )}
       </div>
 
-      <footer className="text-center text-[11px] text-gray-400 dark:text-gray-600 py-4 pb-6 select-none">
-        © 2026 kimjs · 학교스포츠클럽 대진관리
-      </footer>
+      <Footer />
     </div>
   );
 }

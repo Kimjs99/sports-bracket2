@@ -14,6 +14,7 @@ import OrgSelectScreen from './components/OrgSelectScreen';
 import AdminLoginModal from './components/ui/AdminLoginModal';
 import GlobalBar from './components/GlobalBar';
 import GuestView from './components/GuestView';
+import Footer from './components/ui/Footer';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AppContext = createContext(null);
@@ -39,9 +40,9 @@ function AppInner({ theme, setTheme }) {
     })();
   }, [legacyShare]);
 
-  // Detect ?view=<slug> guest URL (only when not logged in; 공유 링크가 우선)
+  // Detect ?view=<slug> guest URL — 로그인 여부와 무관하게 항상 게스트(열람 전용) 모드.
+  // 관리자 전환은 게스트 화면의 명시적 버튼(?view 제거)으로만 이루어진다. (레거시 ?t=가 우선)
   useEffect(() => {
-    if (isLoggedIn) return;
     const params = new URLSearchParams(window.location.search);
     if (params.has('t')) return;
     const slug = params.get('view');
@@ -51,7 +52,7 @@ function AppInner({ theme, setTheme }) {
     Promise.all([loadPublicOrgInfo(slug), loadPublicOrgTournaments(slug)])
       .then(([org, tournaments]) => setGuestData({ org, tournaments }))
       .catch(() => setGuestData('error'));
-  }, [isLoggedIn]);
+  }, []);
 
   // 로그인 후 대진 목록 로드
   const loadTournamentList = useCallback(async () => {
@@ -128,43 +129,46 @@ function AppInner({ theme, setTheme }) {
     );
   }
 
-  // 게스트 URL (?view=<slug>) — 로그인 전에만 적용
+  // 게스트 URL (?view=<slug>) — 로그인 여부와 무관하게 항상 열람 전용 게스트 화면.
+  // 관리자 세션이 있어도 관리 UI를 노출하지 않는다 (전환은 GuestView의 명시적 버튼으로만).
+  if (guestData === 'loading') {
+    return (
+      <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
+        <GlobalBar theme={theme} setTheme={setTheme} />
+        <div className="flex items-center justify-center min-h-screen">
+          <p className="text-gray-400 text-sm">대진 정보를 불러오는 중...</p>
+        </div>
+      </AppContext.Provider>
+    );
+  }
+  if (guestData === 'error') {
+    return (
+      <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
+        <GlobalBar theme={theme} setTheme={setTheme} />
+        <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">잘못된 링크이거나 해당 학교를 찾을 수 없습니다.</p>
+          <button
+            onClick={() => { window.history.replaceState({}, '', window.location.pathname); setGuestData(null); }}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            홈으로
+          </button>
+        </div>
+      </AppContext.Provider>
+    );
+  }
+  if (guestData) {
+    return (
+      <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
+        <GlobalBar theme={theme} setTheme={setTheme} />
+        <GuestView org={guestData.org} tournaments={guestData.tournaments} />
+        {modalOpen && <AdminLoginModal />}
+      </AppContext.Provider>
+    );
+  }
+
+  // 로그인 전: org 선택 화면
   if (!isLoggedIn) {
-    if (guestData === 'loading') {
-      return (
-        <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
-          <GlobalBar theme={theme} setTheme={setTheme} />
-          <div className="flex items-center justify-center min-h-screen">
-            <p className="text-gray-400 text-sm">대진 정보를 불러오는 중...</p>
-          </div>
-        </AppContext.Provider>
-      );
-    }
-    if (guestData === 'error') {
-      return (
-        <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
-          <GlobalBar theme={theme} setTheme={setTheme} />
-          <div className="flex flex-col items-center justify-center min-h-screen gap-3">
-            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">잘못된 링크이거나 해당 학교를 찾을 수 없습니다.</p>
-            <button
-              onClick={() => { window.history.replaceState({}, '', window.location.pathname); setGuestData(null); }}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              홈으로
-            </button>
-          </div>
-        </AppContext.Provider>
-      );
-    }
-    if (guestData) {
-      return (
-        <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
-          <GlobalBar theme={theme} setTheme={setTheme} />
-          <GuestView org={guestData.org} tournaments={guestData.tournaments} />
-        </AppContext.Provider>
-      );
-    }
-    // 로그인 전: org 선택 화면
     return (
       <AppContext.Provider value={{ state, dispatch, asyncDispatch }}>
         <GlobalBar theme={theme} setTheme={setTheme} />
@@ -185,9 +189,7 @@ function AppInner({ theme, setTheme }) {
       {screen === SCREENS.MATCH_PLAY && <MatchPlay />}
       {screen === SCREENS.DASHBOARD && <Dashboard />}
       {modalOpen && <AdminLoginModal />}
-      <footer className="text-center text-[11px] text-gray-400 dark:text-gray-600 py-4 pb-6 select-none">
-        © 2026 kimjs · 학교스포츠클럽 대진 관리 시스템. Designed for school sports.
-      </footer>
+      <Footer />
     </AppContext.Provider>
   );
 }

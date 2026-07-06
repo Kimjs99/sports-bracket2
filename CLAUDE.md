@@ -30,6 +30,8 @@ Two separate React contexts:
 
 **Auth gate in `App.jsx`:** when not logged in, always renders `OrgSelectScreen` (org picker/register/login) regardless of `state.currentScreen`. After login, renders the normal screen tree.
 
+**Guest URL (`?view=<slug>`) always wins (v0.7.1):** when the param is present, `GuestView` (read-only) renders regardless of auth state — a logged-in admin sees the guest screen too, never admin UI. The only admin entry point is GuestView's header button, which strips `?view` and reloads: with a stored session it lands on the admin tree ("관리자 화면"), otherwise on `OrgSelectScreen` ("관리자 로그인").
+
 `state.currentScreen` is one of `SCREENS.*` (`org_select | home | setup | draw | matchplay | dashboard`). `App.jsx` renders the matching component with `{screen === SCREENS.X && <X />}`. Navigate by dispatching `SET_SCREEN` or `BACK_TO_HOME`.
 
 `BACK_TO_HOME` and `SELECT_TOURNAMENT` are async — handled by `asyncDispatch` in `App.jsx`, which calls Supabase then falls back to localStorage before dispatching to the reducer.
