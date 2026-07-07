@@ -9,11 +9,13 @@ import { ACTIONS } from '../store/actions';
 import { SCREENS, MATCH_STATUS, SPORT_EMOJI } from '../constants';
 import { useAdmin } from '../contexts/AdminContext';
 
-import { loadTournament, saveTournament } from '../utils/storage';
+import { loadTournament, loadAllTournaments, saveTournament } from '../utils/storage';
 import { generateBracket, generateGroupTournament, calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
 import GuideModal from './ui/GuideModal';
 import ConfirmDialog from './ui/ConfirmDialog';
+import DailyResults from './ui/DailyResults';
+import SportFilterBar, { filterSportGroups } from './ui/SportFilterBar';
 
 const LEVELS = ['초등', '중등', '고등'];
 const LEVEL_COLOR = {
@@ -363,6 +365,25 @@ function EmptyLevel({ level, isLoggedIn, onNew, onLogin }) {
 
 function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLogin }) {
   const colors = LEVEL_COLOR[level];
+  const [viewMode, setViewMode] = useState('sports'); // 'sports' | 'daily'
+  const [gradeFilter, setGradeFilter] = useState(null);
+  const [sportFilter, setSportFilter] = useState(null);
+  // 일자별 결과는 경기 데이터가 필요해 전체 대진(full)을 지연 로드
+  const [dailyData, setDailyData] = useState(null);
+
+  useEffect(() => {
+    if (viewMode !== 'daily') return;
+    let alive = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDailyData(null);
+    loadAllTournaments().then(all => {
+      if (alive) setDailyData(all.filter(t => t.meta.schoolLevel === level));
+    });
+    return () => { alive = false; };
+  }, [viewMode, level, sportGroups]);
+
+  const visibleGroups = filterSportGroups(sportGroups, gradeFilter, sportFilter);
+
   return (
     <div>
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
@@ -387,8 +408,31 @@ function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLo
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-4">
+        {/* 뷰 전환: 종목별 카드 / 일자별 경기결과 */}
+        <div className="flex items-center gap-1.5 mb-3">
+          {[{ id: 'sports', label: '종목별' }, { id: 'daily', label: '일자별 결과' }].map(v => (
+            <button key={v.id} onClick={() => setViewMode(v.id)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors
+                ${viewMode === v.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        {viewMode === 'daily' ? (
+          dailyData === null
+            ? <p className="text-center py-12 text-sm text-gray-400">경기 결과를 불러오는 중...</p>
+            : <DailyResults tournaments={dailyData} />
+        ) : (
+        <>
+        <SportFilterBar groups={sportGroups} gradeFilter={gradeFilter} setGradeFilter={setGradeFilter} sportFilter={sportFilter} setSportFilter={setSportFilter} />
+        {visibleGroups.length === 0 ? (
+          <p className="text-center py-12 text-sm text-gray-400 dark:text-gray-500">조건에 맞는 종목이 없습니다</p>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {sportGroups.map(group => {
+          {visibleGroups.map(group => {
             const latest = group.items[0];
             const count = group.items.length;
             const isOver = !!latest.winner;
@@ -451,6 +495,9 @@ function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLo
             );
           })}
         </div>
+        )}
+        </>
+        )}
       </div>
     </div>
   );
@@ -496,6 +543,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
   const [noticeContent, setNoticeContent] = useState('');
   const [copied, setCopied] = useState(false);
   const [confirmResetBracket, setConfirmResetBracket] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Keep currentId valid when filteredList changes (including sport group changes)
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -528,6 +576,14 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
       dispatch({ type: ACTIONS.SET_META, payload: { schoolLevel: level } });
       dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.SETUP } });
     });
+  }
+
+  // 현재 선택된 대진(차수)만 영구 삭제 — localStorage + Supabase 모두 제거
+  async function deleteCurrent() {
+    if (!currentId) return;
+    await asyncDispatch({ type: ACTIONS.DELETE_TOURNAMENT, payload: { id: currentId } });
+    setConfirmDelete(false);
+    setCurrentId(null); // filteredList effect가 남은 대진을 재선택하거나 목록으로 복귀
   }
 
   async function resetBracket() {
@@ -733,6 +789,16 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
             </div>
           )}
 
+          {confirmDelete && (
+            <ConfirmDialog
+              title="대진 삭제"
+              message={`이 대진(${filteredList.length > 1 ? '현재 선택한 차수' : meta.sport})을 영구 삭제합니다. 모든 경기 결과·일정·공지가 함께 삭제되며 되돌릴 수 없습니다.`}
+              confirmLabel="삭제"
+              onConfirm={deleteCurrent}
+              onCancel={() => setConfirmDelete(false)}
+            />
+          )}
+
           {confirmResetBracket && (
             <ConfirmDialog
               title="대진 초기화"
@@ -775,6 +841,10 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
                 <button onClick={() => setConfirmResetBracket(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-red-200 dark:border-red-900 text-red-500 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 font-medium transition-colors">
                   <RotateCcw size={12} /> 대진 초기화
+                </button>
+                <button onClick={() => setConfirmDelete(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium transition-colors">
+                  <Trash2 size={12} /> 대진 삭제
                 </button>
               </>
             )}

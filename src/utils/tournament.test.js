@@ -11,6 +11,7 @@ import {
   calcGroupConfig,
   generateGroupTournament,
   rebuildGroupStage,
+  collectDailyResults,
   isGroupStageComplete,
   submitGroupTournamentResult,
   editGroupTournamentResult,
@@ -496,5 +497,57 @@ describe('수동 배정', () => {
       expect(m.homeScore).toBeNull();
       expect(m.status === MATCH_STATUS.SCHEDULED || m.status === MATCH_STATUS.BYE).toBe(true);
     })));
+  });
+});
+
+// ── 일자별 경기결과 (collectDailyResults) ─────────────────────────────────────
+
+describe('collectDailyResults', () => {
+  function makeTourney({ sport = '농구', grade = null, gender = '혼성', dates = {} } = {}) {
+    const { rounds } = generateBracket(['a', 'b', 'c', 'd'], 1, { ordered: true });
+    let rs = submitMatchResult(rounds, 'r1m1', 10, 5);
+    rs = submitMatchResult(rs, 'r1m2', 3, 7);
+    rs = rs.map(r => ({ ...r, matches: r.matches.map(m => dates[m.id] ? { ...m, date: dates[m.id] } : m) }));
+    return { meta: { sport, grade, gender, gameFormat: 'tournament' }, teams: ['a', 'b', 'c', 'd'], bracket: { rounds: rs } };
+  }
+
+  it('완료 경기만 수집하고 종별 라벨을 붙인다', () => {
+    const t = makeTourney({ sport: '피구', grade: '1학년', gender: '여성' });
+    const all = collectDailyResults([t]).flatMap(d => d.items);
+    expect(all).toHaveLength(2); // 결승(예정)은 제외
+    expect(all.every(e => e.label === '피구 (1학년, 여성)')).toBe(true);
+  });
+
+  it('혼성·학년 없음은 종목명만 라벨로 쓴다', () => {
+    const t = makeTourney();
+    const all = collectDailyResults([t]).flatMap(d => d.items);
+    expect(all[0].label).toBe('농구');
+  });
+
+  it('match.date 우선 그룹핑, 최근 날짜가 먼저 온다', () => {
+    const t = makeTourney({ dates: { r1m1: '2026-07-01', r1m2: '2026-07-03' } });
+    const days = collectDailyResults([t]);
+    expect(days.map(d => d.date)).toEqual(['2026-07-03', '2026-07-01']);
+  });
+
+  it('date가 없으면 completedAt의 로컬 날짜로 폴백한다', () => {
+    const t = makeTourney();
+    const days = collectDailyResults([t]);
+    expect(days).toHaveLength(1);
+    expect(days[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/); // 오늘(로컬)
+  });
+
+  it('조별리그는 조별 경기를 수집하고 라운드명에 조 이름을 붙인다', () => {
+    const g = generateGroupTournament(['a', 'b', 'c', 'd'], { manualGroups: [['a', 'b'], ['c', 'd']] });
+    let t = {
+      meta: { sport: '축구', grade: null, gender: '혼성', gameFormat: 'group_tournament', advancePerGroup: 2 },
+      teams: ['a', 'b', 'c', 'd'],
+      bracket: { groups: g.groups, knockout: null },
+    };
+    t = submitGroupTournamentResult(t, 'gA_r1m1', 2, 1);
+    const all = collectDailyResults([t]).flatMap(d => d.items);
+    // 2팀 조는 1경기뿐이라 A조 완료 → 본선은 B조 미완이라 미생성; 완료 1건
+    expect(all).toHaveLength(1);
+    expect(all[0].roundName).toContain('A조');
   });
 });

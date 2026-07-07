@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.5] - 2026-07-08
+
+### ✨ Features
+- 대진 개별 삭제: 대진 상세 화면에 "대진 삭제" 버튼 추가 — 현재 선택된 차수만 확인 대화상자 후 영구 삭제 (localStorage + Supabase)
+- 학년·종목 필터: 종목별 현황 그리드에 필터 칩 (`SportFilterBar`) — 값이 2개 이상일 때만 노출, 관리자 홈·게스트 동일 적용
+- 일자별 경기결과: 종목별/일자별 뷰 토글 — 완료 경기를 일자별로 그룹핑(`collectDailyResults`, 일정 date 우선·완료시각 로컬날짜 폴백, 최근 날짜 먼저), 시간·장소·승자 표기. 관리자 홈은 전체 대진 지연 로드, 게스트는 보유 데이터로 즉시 렌더
+
+### ✅ Tests
+- collectDailyResults 5건 추가 (완료 경기만·종별 라벨·date 우선·completedAt 폴백·조별 라운드명) — 총 98건
+
+---
+
 ## [v0.7.4] - 2026-07-08
 
 ### ✨ Features

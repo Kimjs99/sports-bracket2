@@ -5,6 +5,8 @@ import {
 import { useAdmin } from '../contexts/AdminContext';
 import { SCHOOL_LEVELS, SPORT_EMOJI, MATCH_STATUS } from '../constants';
 import Footer from './ui/Footer';
+import DailyResults from './ui/DailyResults';
+import SportFilterBar, { filterSportGroups } from './ui/SportFilterBar';
 import { makeSummary } from '../store/reducer';
 import { calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
@@ -315,6 +317,9 @@ export default function GuestView({ org, tournaments }) {
     return found ?? '고등';
   });
   const [selectedTournament, setSelectedTournament] = useState(null);
+  const [viewMode, setViewMode] = useState('sports'); // 'sports' | 'daily'
+  const [gradeFilter, setGradeFilter] = useState(null);
+  const [sportFilter, setSportFilter] = useState(null);
 
   const levelTournaments = useMemo(() =>
     tournaments
@@ -333,6 +338,12 @@ export default function GuestView({ org, tournaments }) {
     });
     return [...map.values()];
   }, [levelTournaments]);
+
+  function selectLevel(level) {
+    setActiveLevel(level);
+    setGradeFilter(null);
+    setSportFilter(null);
+  }
 
   function goAdmin() {
     const url = new URL(window.location.href);
@@ -383,7 +394,7 @@ export default function GuestView({ org, tournaments }) {
             const hasData = tournaments.some(t => t.meta.schoolLevel === level);
             const colors = LEVEL_COLORS[level];
             return (
-              <button key={level} onClick={() => setActiveLevel(level)}
+              <button key={level} onClick={() => selectLevel(level)}
                 className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5
                   ${activeLevel === level ? colors.activeTab : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
                 {level}부
@@ -402,14 +413,40 @@ export default function GuestView({ org, tournaments }) {
             <p className="text-gray-400 dark:text-gray-500 text-sm">{activeLevel}부 대진이 없습니다</p>
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {sportGroups.map(group => (
-              <SportCard
-                key={group.key}
-                group={group}
-                onSelect={t => setSelectedTournament(t)}
-              />
-            ))}
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            {/* 뷰 전환: 종목별 카드 / 일자별 경기결과 */}
+            <div className="flex items-center gap-1.5 mb-3">
+              {[{ id: 'sports', label: '종목별' }, { id: 'daily', label: '일자별 결과' }].map(v => (
+                <button key={v.id} onClick={() => setViewMode(v.id)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors
+                    ${viewMode === v.id
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            {viewMode === 'daily' ? (
+              <DailyResults tournaments={levelTournaments} />
+            ) : (
+              <>
+                <SportFilterBar groups={sportGroups} gradeFilter={gradeFilter} setGradeFilter={setGradeFilter} sportFilter={sportFilter} setSportFilter={setSportFilter} />
+                {filterSportGroups(sportGroups, gradeFilter, sportFilter).length === 0 ? (
+                  <p className="text-center py-12 text-sm text-gray-400 dark:text-gray-500">조건에 맞는 종목이 없습니다</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {filterSportGroups(sportGroups, gradeFilter, sportFilter).map(group => (
+                      <SportCard
+                        key={group.key}
+                        group={group}
+                        onSelect={t => setSelectedTournament(t)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

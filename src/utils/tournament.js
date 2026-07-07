@@ -429,6 +429,50 @@ export function editGroupTournamentResult(tournament, matchId) {
   return tournament;
 }
 
+// ── Daily results (일자별 경기결과) ───────────────────────────────────────────
+
+function localDateOf(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 여러 대진의 완료 경기를 일자별로 그룹핑.
+// 일자: 일정 입력의 match.date 우선, 없으면 completedAt의 로컬 날짜, 둘 다 없으면 null(미지정, 마지막 배치).
+// 반환: [{ date: 'YYYY-MM-DD'|null, items: [{ label, roundName, match }] }] — 날짜 내림차순(최근 먼저)
+export function collectDailyResults(tournaments) {
+  const entries = [];
+  for (const t of tournaments) {
+    const m = t.meta;
+    const sub = [m.grade, m.gender && m.gender !== '혼성' ? m.gender : null].filter(Boolean).join(', ');
+    const label = `${m.sport}${sub ? ` (${sub})` : ''}`;
+    const rounds = m.gameFormat === 'group_tournament'
+      ? [...t.bracket.groups.flatMap(g => g.rounds.map(r => ({ ...r, name: `${g.name} ${r.name}` }))), ...(t.bracket.knockout?.rounds ?? [])]
+      : t.bracket.rounds;
+    for (const r of rounds) {
+      for (const match of r.matches) {
+        if (match.isBye || match.status !== MATCH_STATUS.DONE) continue;
+        const date = match.date || (match.completedAt ? localDateOf(match.completedAt) : null);
+        entries.push({ date, label, roundName: r.name, match });
+      }
+    }
+  }
+
+  const map = new Map();
+  for (const e of entries) {
+    const key = e.date ?? '';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(e);
+  }
+  return [...map.entries()]
+    .sort((a, b) => (a[0] === '' ? 1 : b[0] === '' ? -1 : b[0].localeCompare(a[0])))
+    .map(([date, items]) => ({
+      date: date || null,
+      items: items.sort((x, y) =>
+        (x.match.time ?? x.match.completedAt ?? '').localeCompare(y.match.time ?? y.match.completedAt ?? '')),
+    }));
+}
+
 // ── Tournament (single elimination) ──────────────────────────────────────────
 
 export function submitMatchResult(bracketRounds, matchId, homeScore, awayScore) {
