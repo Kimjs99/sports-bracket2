@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.0] - 2026-07-09
+
+### ✨ Features
+- PC(1920×1080) 레이아웃 최적화: PC 해상도에서 루트 폰트 스케일업(≥1280px 17px, ≥1728px 18px) — rem 기반 폰트·여백 일괄 확대, 모바일은 16px 유지
+- 주요 화면 컨테이너 폭 확장(xl 이상): Home/게스트/Dashboard 4xl→6xl, MatchPlay 3xl→5xl, Setup xl→2xl, 기관 선택 lg→xl
+- 대진표 트리 여백 개선: 라운드 컬럼이 남는 폭을 나눠 갖고(상한 320px, PC 400px) 중앙 정렬, 매치 카드 flex 확장, 팀명 고정폭(100px) 잘림 제거 — 좁은 화면 가로 스크롤은 기존 유지
+
+### 🔧 Chore
+- GitHub Actions 워크플로 Node 20 deprecation 해소: checkout v7 · setup-node v6(Node 22) · upload-pages-artifact v5 · deploy-pages v5
+
+---
+
 ## [v1.0.0] - 2026-07-08
 
 ### 🎉 정식 릴리스

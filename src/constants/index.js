@@ -54,4 +54,4 @@ export const MAX_TEAM_NAME_LENGTH = 20;
 export const MAX_HISTORY = 10;
 
 // 앱 버전 — CHANGELOG.md 최신 릴리스와 함께 갱신 (푸터 표기용)
-export const APP_VERSION = 'v1.0.0';
+export const APP_VERSION = 'v1.1.0';
