@@ -258,7 +258,7 @@ export default function OrgSelectScreen({ onOrgLogin }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-lg mx-auto px-4 py-5">
+        <div className="max-w-lg xl:max-w-xl mx-auto px-4 py-5">
           <div className="flex items-center gap-2.5 mb-1">
             <School size={20} className="text-blue-600 dark:text-blue-400" />
             <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">학교스포츠클럽 대진 관리</h1>
@@ -267,7 +267,7 @@ export default function OrgSelectScreen({ onOrgLogin }) {
         </div>
       </div>
 
-      <div className="flex-1 max-w-lg mx-auto w-full px-4 py-6 space-y-4">
+      <div className="flex-1 max-w-lg xl:max-w-xl mx-auto w-full px-4 py-6 space-y-4">
         {/* Search */}
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

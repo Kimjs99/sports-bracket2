@@ -239,7 +239,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-lg no-print">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           {isLoggedIn ? (
             <button
               onClick={() => dispatch({ type: ACTIONS.SET_SCREEN, payload: { screen: SCREENS.MATCH_PLAY } })}
@@ -263,7 +263,7 @@ export default function Dashboard() {
             전체 목록
           </button>
         </div>
-        <div className="max-w-4xl mx-auto px-4 flex gap-0 overflow-x-auto">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 flex gap-0 overflow-x-auto">
           {tabs.map(t => (
             <button
               key={t.id}
@@ -278,7 +278,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-4xl xl:max-w-6xl mx-auto p-4">
         {activeTab === 'overview' && (
           <div className="space-y-4">
             {isTournamentOver ? (

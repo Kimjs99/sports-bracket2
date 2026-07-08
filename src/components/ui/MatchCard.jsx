@@ -3,10 +3,10 @@ import { MATCH_STATUS } from '../../constants';
 
 function ByePassCard({ teamName }) {
   return (
-    <div style={{ minWidth: 148, margin: '0 4px' }} className="overflow-hidden rounded-lg">
+    <div style={{ minWidth: 148, margin: '0 4px', flex: 1 }} className="overflow-hidden rounded-lg">
       <div className="flex items-center gap-2 px-3 py-[7px] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-800 rounded-t-lg">
         <ArrowRight size={11} className="text-blue-400 flex-shrink-0" />
-        <span className="flex-1 text-xs font-bold text-blue-700 dark:text-blue-400 truncate" style={{ maxWidth: 90 }}>
+        <span className="flex-1 min-w-0 text-xs font-bold text-blue-700 dark:text-blue-400 truncate">
           {teamName ?? '—'}
         </span>
         <span className="text-[9px] font-semibold text-blue-500 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 px-1.5 py-0.5 rounded-full flex-shrink-0">
@@ -30,7 +30,7 @@ function TeamRow({ name, score, isWinner, isDone }) {
         ${!isWinner && !isEmpty ? 'text-gray-700 dark:text-gray-300' : ''}
       `}
     >
-      <span className="truncate" style={{ maxWidth: 100 }}>
+      <span className="truncate flex-1 min-w-0">
         {isEmpty ? '—' : name}
       </span>
       {isDone && !isEmpty && (
@@ -59,7 +59,7 @@ export default function MatchCard({ match }) {
   return (
     <div
       className={`border ${borderColor} ${bgColor} rounded-lg shadow-sm mx-1 overflow-hidden`}
-      style={{ minWidth: 148 }}
+      style={{ minWidth: 148, flex: 1 }}
     >
       <TeamRow name={home} score={homeScore} isWinner={isDone && winner === home} isDone={isDone} />
       <div className="border-t border-gray-100 dark:border-gray-700" />

@@ -387,7 +387,7 @@ function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLo
   return (
     <div>
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors?.badge}`}>{level}부</span>
             <h2 className="font-bold text-gray-900 dark:text-gray-100">종목별 현황</h2>
@@ -407,7 +407,7 @@ function LevelOverview({ level, sportGroups, onSelectSport, isAdmin, onNew, onLo
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 py-4">
         {/* 뷰 전환: 종목별 카드 / 일자별 경기결과 */}
         <div className="flex items-center gap-1.5 mb-3">
           {[{ id: 'sports', label: '종목별' }, { id: 'daily', label: '일자별 결과' }].map(v => (
@@ -724,7 +724,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
       {/* Back to overview button (only when multiple sport groups) */}
       {sportGroups.length > 1 && (
         <div className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl xl:max-w-6xl mx-auto">
             <button onClick={() => setActiveSportKey(null)}
               className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">
               <ArrowLeft size={13} /> 종목 목록으로
@@ -735,7 +735,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
 
       {/* Tournament info + admin controls */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -854,7 +854,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
 
       {/* Sub-tabs */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 flex gap-0 overflow-x-auto">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 flex gap-0 overflow-x-auto">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1
@@ -870,7 +870,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
       </div>
 
       {/* Tab content */}
-      <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 py-4">
         {/* 현황 */}
         {activeTab === 'overview' && (
           <div className="space-y-4">
@@ -1126,7 +1126,7 @@ export default function Home() {
 
       {/* App header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl">🏀</span>
             <div>
@@ -1162,7 +1162,7 @@ export default function Home() {
         </div>
 
         {/* Level tabs */}
-        <div className="max-w-4xl mx-auto px-4 flex gap-0">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 flex gap-0">
           {LEVELS.map(level => {
             const hasData = tournamentList.some(t => t.schoolLevel === level);
             const colors = LEVEL_COLOR[level];
@@ -1201,7 +1201,7 @@ export default function Home() {
 
         {/* 전체 초기화 — admin only */}
         {isLoggedIn && tournamentList.length > 0 && (
-          <div className="max-w-4xl mx-auto px-4 mt-8 mb-4">
+          <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 mt-8 mb-4">
             <div className="border border-red-200 dark:border-red-900/50 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-3">

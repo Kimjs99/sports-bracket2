@@ -177,7 +177,7 @@ export default function Setup() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-xl p-8">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-xl xl:max-w-2xl p-8">
         {/* Back button */}
         <button
           onClick={() => dispatch({ type: ACTIONS.BACK_TO_HOME })}

@@ -159,7 +159,7 @@ function GroupMatchPlay({ tournament, dispatch }) {
   return (
     <>
       {/* Section tabs */}
-      <div className="max-w-3xl mx-auto px-4 flex gap-0 overflow-x-auto">
+      <div className="max-w-3xl xl:max-w-5xl mx-auto px-4 flex gap-0 overflow-x-auto">
         {sections.map(s => (
           <button key={s.id} onClick={() => { setActiveSection(s.id); setActiveKnockoutRound(0); }}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-1
@@ -180,7 +180,7 @@ function GroupMatchPlay({ tournament, dispatch }) {
 
       {/* Knockout banner */}
       {bracket.knockout && activeSection !== 'knockout' && (
-        <div className="max-w-3xl mx-auto px-4 pt-3">
+        <div className="max-w-3xl xl:max-w-5xl mx-auto px-4 pt-3">
           <button onClick={() => setActiveSection('knockout')}
             className="w-full flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2 text-sm text-amber-700 dark:text-amber-400 font-medium">
             <Trophy size={14} /> 조별 리그 완료 — {meta.knockoutSize}강 본선 진행 중! 탭을 눌러 이동
@@ -188,7 +188,7 @@ function GroupMatchPlay({ tournament, dispatch }) {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto p-4">
+      <div className="max-w-3xl xl:max-w-5xl mx-auto p-4">
         {/* Group section: show all rounds vertically */}
         {activeS?.type === 'group' && (
           <div className="space-y-6">
@@ -262,7 +262,7 @@ function StandardMatchPlay({ tournament, dispatch }) {
       <div className="h-1.5 bg-gray-100 dark:bg-gray-700">
         <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
-      <div className="max-w-3xl mx-auto px-4 flex gap-0 overflow-x-auto">
+      <div className="max-w-3xl xl:max-w-5xl mx-auto px-4 flex gap-0 overflow-x-auto">
         {rounds.map((r, idx) => (
           <button key={r.roundNum} onClick={() => setActiveRound(idx)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors
@@ -274,7 +274,7 @@ function StandardMatchPlay({ tournament, dispatch }) {
           </button>
         ))}
       </div>
-      <div className="max-w-3xl mx-auto p-4">
+      <div className="max-w-3xl xl:max-w-5xl mx-auto p-4">
         <div className="space-y-3">
           {rounds[activeRound]?.matches.map(match => (
             <MatchResultCard
@@ -336,7 +336,7 @@ export default function MatchPlay() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-3xl xl:max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => asyncDispatch({ type: ACTIONS.BACK_TO_HOME })}

@@ -112,7 +112,7 @@ function GuestTournamentView({ tournament, onBack }) {
   return (
     <div>
       <div className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto">
           <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">
             <ArrowLeft size={13} /> 종목 목록으로
           </button>
@@ -120,7 +120,7 @@ function GuestTournamentView({ tournament, onBack }) {
       </div>
 
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto">
           <h2 className="font-bold text-gray-900 dark:text-gray-100">
             {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport}{gradeLabel} {formatLabel}
           </h2>
@@ -137,7 +137,7 @@ function GuestTournamentView({ tournament, onBack }) {
       </div>
 
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 flex gap-0 overflow-x-auto">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 flex gap-0 overflow-x-auto">
           {[
             { id: 'bracket', label: isGroup ? '조별 현황' : isLeague ? '순위표' : '대진표' },
             { id: 'feed', label: `결과 피드 (${doneMatches.length})` },
@@ -151,7 +151,7 @@ function GuestTournamentView({ tournament, onBack }) {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 py-4">
         {tab === 'bracket' && (
           isGroup ? (
             <div className="space-y-4">
@@ -364,7 +364,7 @@ export default function GuestView({ org, tournaments }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl">🏀</span>
             <div>
@@ -389,7 +389,7 @@ export default function GuestView({ org, tournaments }) {
         </div>
 
         {/* Level tabs */}
-        <div className="max-w-4xl mx-auto px-4 flex gap-0">
+        <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 flex gap-0">
           {SCHOOL_LEVELS.map(level => {
             const hasData = tournaments.some(t => t.meta.schoolLevel === level);
             const colors = LEVEL_COLORS[level];
@@ -413,7 +413,7 @@ export default function GuestView({ org, tournaments }) {
             <p className="text-gray-400 dark:text-gray-500 text-sm">{activeLevel}부 대진이 없습니다</p>
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="max-w-4xl xl:max-w-6xl mx-auto px-4 py-4">
             {/* 뷰 전환: 종목별 카드 / 일자별 경기결과 */}
             <div className="flex items-center gap-1.5 mb-3">
               {[{ id: 'sports', label: '종목별' }, { id: 'daily', label: '일자별 결과' }].map(v => (

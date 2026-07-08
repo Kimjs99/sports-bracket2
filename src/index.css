@@ -19,6 +19,15 @@ body {
   min-height: 100vh;
 }
 
+/* PC 화면에서 전체 UI 스케일 업 — rem 기반(폰트·여백·max-w)이 함께 커지고 모바일은 16px 그대로.
+   Tailwind 브레이크포인트는 initial font-size(16px) 기준이라 여기 값에 영향받지 않음 */
+@media (min-width: 1280px) {
+  html { font-size: 17px; }
+}
+@media (min-width: 1728px) {
+  html { font-size: 18px; }
+}
+
 /* Bracket tree layout */
 .bracket-scroll {
   overflow-x: auto;
@@ -26,18 +35,26 @@ body {
 }
 
 .bracket-container {
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: stretch;
+  justify-content: center;
   min-width: max-content;
+  width: 100%;
   gap: 0;
 }
 
 .round-column {
   display: flex;
   flex-direction: column;
+  flex: 1 1 0;
   min-width: 172px;
+  max-width: 320px;
   border-right: 1px solid #e2e8f0;
+}
+
+@media (min-width: 1280px) {
+  .round-column { min-width: 200px; max-width: 400px; }
 }
 
 .round-column:last-child {
@@ -47,7 +64,7 @@ body {
 .round-header {
   text-align: center;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #475569;
   padding: 8px 4px;
   background: #f8fafc;
