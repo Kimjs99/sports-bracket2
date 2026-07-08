@@ -7,6 +7,7 @@ import { SCHOOL_LEVELS, SPORT_EMOJI, MATCH_STATUS } from '../constants';
 import Footer from './ui/Footer';
 import DailyResults from './ui/DailyResults';
 import SportFilterBar, { filterSportGroups } from './ui/SportFilterBar';
+import SportQuickNav from './ui/SportQuickNav';
 import { makeSummary } from '../store/reducer';
 import { calcLeagueStandings } from '../utils/tournament';
 import BracketTree from './ui/BracketTree';
@@ -92,8 +93,9 @@ function GroupCard({ group, advancePerGroup }) {
 
 // ─── Per-tournament detail view ────────────────────────────────────────────────
 
-function GuestTournamentView({ tournament, onBack }) {
+function GuestTournamentView({ tournament, onBack, sportGroups = [], onSwitch }) {
   const { meta, bracket, teams } = tournament;
+  const activeSportKey = `${meta.sport}__${meta.gender ?? '혼성'}__${meta.grade ?? ''}`;
   const isGroup = meta.gameFormat === 'group_tournament';
   const isLeague = meta.gameFormat === 'league';
   const summary = makeSummary(tournament);
@@ -121,12 +123,17 @@ function GuestTournamentView({ tournament, onBack }) {
 
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="max-w-4xl xl:max-w-6xl mx-auto">
-          <h2 className="font-bold text-gray-900 dark:text-gray-100">
-            {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport}{gradeLabel} {formatLabel}
-          </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {meta.schoolLevel}부 · {meta.totalTeams}팀
-          </p>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h2 className="font-bold text-gray-900 dark:text-gray-100">
+                {SPORT_EMOJI[meta.sport] ?? '🏅'} {genderLabel}{meta.sport}{gradeLabel} {formatLabel}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {meta.schoolLevel}부 · {meta.totalTeams}팀
+              </p>
+            </div>
+            <SportQuickNav groups={sportGroups} activeKey={activeSportKey} onSelect={g => onSwitch(g.items[0])} />
+          </div>
           {summary.winner && (
             <div className="mt-2 flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
               <Trophy size={13} className="text-amber-500 flex-shrink-0" />
@@ -354,7 +361,12 @@ export default function GuestView({ org, tournaments }) {
   if (selectedTournament) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <GuestTournamentView tournament={selectedTournament} onBack={() => setSelectedTournament(null)} />
+        <GuestTournamentView
+          tournament={selectedTournament}
+          onBack={() => setSelectedTournament(null)}
+          sportGroups={sportGroups}
+          onSwitch={t => setSelectedTournament(t)}
+        />
         <Footer />
       </div>
     );

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.0] - 2026-07-09
+
+### ✨ Features
+- 종목 퀵 내비게이션(`SportQuickNav`): 종목 상세 타이틀 우측에 타 종목 칩(이모지·종목명·학년/성별) 표시 — 목록으로 돌아가지 않고 클릭 한 번으로 다른 종목 전환. 관리자 홈 상세·게스트 화면 동일 적용
+- 대진표 세로 간격 확대: 매치 행 최소 높이 80px → 96px(기본)/144px(PC ≥1280px) — 라운드 연결선 흐름 시인성 개선
+
+---
+
 ## [v1.1.0] - 2026-07-09
 
 ### ✨ Features

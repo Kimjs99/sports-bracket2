@@ -16,6 +16,7 @@ import GuideModal from './ui/GuideModal';
 import ConfirmDialog from './ui/ConfirmDialog';
 import DailyResults from './ui/DailyResults';
 import SportFilterBar, { filterSportGroups } from './ui/SportFilterBar';
+import SportQuickNav from './ui/SportQuickNav';
 
 const LEVELS = ['초등', '중등', '고등'];
 const LEVEL_COLOR = {
@@ -754,7 +755,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
               </div>
               <TournamentChasu list={filteredList} currentId={currentId} onSelect={setCurrentId} />
             </div>
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex flex-col items-end gap-2 min-w-0">
               {winner ? (
                 <span className="flex items-center gap-1 text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full">
                   <Trophy size={11} /> 대회 종료
@@ -766,6 +767,7 @@ function LevelPanel({ level, summaryList, isAdmin, dispatch, asyncDispatch, requ
               ) : (
                 <span className="text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2.5 py-1 rounded-full">대기중</span>
               )}
+              <SportQuickNav groups={sportGroups} activeKey={activeSportKey} onSelect={g => setActiveSportKey(g.key)} />
             </div>
           </div>
 

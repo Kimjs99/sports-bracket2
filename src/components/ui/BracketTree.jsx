@@ -27,12 +27,12 @@ function RoundColumn({ round, isLast }) {
           return (
             <div
               key={match.id}
+              className="match-row"
               style={{
                 display: 'flex',
                 flexDirection: 'row',
                 alignItems: 'center',
                 flex: 1,
-                minHeight: 80,
               }}
             >
               <MatchCard match={match} />

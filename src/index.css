@@ -87,6 +87,15 @@ body {
   align-items: center;
 }
 
+/* 대진표 매치 행 높이 — 세로 간격이 좁으면 연결선·라운드 흐름의 시인성이 떨어짐 */
+.match-row {
+  min-height: 96px;
+}
+
+@media (min-width: 1280px) {
+  .match-row { min-height: 144px; }
+}
+
 .match-connector {
   display: flex;
   flex-direction: column;
